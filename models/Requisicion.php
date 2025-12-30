@@ -183,10 +183,12 @@ class Requisicion {
     public function obtenerDetalles($requisicion_id) {
         $sql = "SELECT rd.*, 
                 i.precio_unitario,
-                inv_original.codigo as codigo_original
+                inv_original.codigo as codigo_original,
+                p.nombre as proveedor_nombre
                 FROM requisicion_detalles rd
                 LEFT JOIN inventario i ON rd.producto_id = i.id
                 LEFT JOIN inventario inv_original ON rd.producto_id = inv_original.id
+                LEFT JOIN proveedores p ON rd.proveedor_id = p.id
                 WHERE rd.requisicion_id = ?";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $requisicion_id);

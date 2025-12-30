@@ -20,11 +20,21 @@ class RequisicionController {
         $resultado = $this->requisicionModel->crear($datos);
         
         if ($resultado['success']) {
-            // Agregar detalles
             $productos_req = $datos['productos'];
             $cantidades = $datos['cantidades'];
             $unidades = $datos['unidades'];
-            $productos_nombre = $datos['productos_nombre'] ?? [];
+            
+            $productos_nombre_otros = [];
+            foreach ($_POST as $key => $value) {
+                if (strpos($key, 'producto_nombre_') === 0) {
+                    $index = str_replace('producto_nombre_', '', $key);
+                    $productos_nombre_otros[$index] = trim($value);
+                }
+            }
+            
+            $contador_otros = 0;
+            $indices_otros = array_keys($productos_nombre_otros);
+            sort($indices_otros); // Ordenar para procesar en orden
             
             for ($i = 0; $i < count($productos_req); $i++) {
                 if (!empty($productos_req[$i]) && !empty($cantidades[$i])) {
@@ -32,6 +42,7 @@ class RequisicionController {
                     $producto_nombre = '';
                     
                     if ($producto_id) {
+                        // Producto del inventario
                         $conn = getConnection();
                         $sql = "SELECT nombre FROM inventario WHERE id = ?";
                         $stmt = $conn->prepare($sql);
@@ -44,7 +55,11 @@ class RequisicionController {
                         $stmt->close();
                         $conn->close();
                     } else {
-                        $producto_nombre = $productos_nombre[$i] ?? '';
+                        if (isset($indices_otros[$contador_otros])) {
+                            $indice_real = $indices_otros[$contador_otros];
+                            $producto_nombre = $productos_nombre_otros[$indice_real];
+                            $contador_otros++;
+                        }
                     }
                     
                     $detalle = [
