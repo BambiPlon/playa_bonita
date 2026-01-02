@@ -33,6 +33,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute();
             $stmt->close();
             
+            $stmt = $db->prepare("UPDATE requisicion_detalles SET aprobado = 0, justificacion_rechazo = ? WHERE requisicion_id = ?");
+            $stmt->bind_param("si", $justificacion, $requisicion_id);
+            $stmt->execute();
+            $stmt->close();
+            
             $stmt = $db->prepare("SELECT id FROM usuarios WHERE rol = 'compras' AND activo = 1");
             $stmt->execute();
             $result = $stmt->get_result();

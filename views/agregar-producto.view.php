@@ -22,20 +22,30 @@
     <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 30px; border: 1px solid rgba(41, 98, 255, 0.2);">
         <form method="POST" action="agregar-producto.php">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                <!-- Cambiando el campo de nombre para que sea autocomplete en lugar de código -->
+                <div class="form-group">
+                    <label for="nombre" style="display: flex; align-items: center; gap: 8px; color: #374151; font-weight: 600; margin-bottom: 8px;">
+                        <i class="fas fa-box" style="color: #2962FF;"></i> Nombre del Producto: *
+                    </label>
+                    <div style="position: relative;">
+                        <input type="text" id="nombre" name="nombre" required 
+                               placeholder="Escribe el nombre del producto..." 
+                               autocomplete="off"
+                               style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; color: #1f2937;">
+                        <div id="nombre-autocomplete" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #d1d5db; border-top: none; border-radius: 0 0 8px 8px; max-height: 300px; overflow-y: auto; display: none; z-index: 1000; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"></div>
+                    </div>
+                </div>
+                
                 <div class="form-group">
                     <label for="codigo" style="display: flex; align-items: center; gap: 8px; color: #374151; font-weight: 600; margin-bottom: 8px;">
                         <i class="fas fa-barcode" style="color: #2962FF;"></i> Código: *
                     </label>
-                    <input type="text" id="codigo" name="codigo" required 
-                           placeholder="Ej: TEC-001" style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; color: #1f2937;">
-                </div>
-                
-                <div class="form-group">
-                    <label for="nombre" style="display: flex; align-items: center; gap: 8px; color: #374151; font-weight: 600; margin-bottom: 8px;">
-                        <i class="fas fa-box" style="color: #2962FF;"></i> Nombre: *
-                    </label>
-                    <input type="text" id="nombre" name="nombre" required 
-                           placeholder="Nombre del producto" style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; color: #1f2937;">
+                    <input type="text" id="codigo" name="codigo" required readonly
+                           placeholder="Se generará automáticamente" 
+                           style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #f3f4f6; color: #1f2937; cursor: not-allowed;">
+                    <small style="color: #6b7280; display: block; margin-top: 5px;">
+                        <i class="fas fa-info-circle"></i> El código se auto-completa al seleccionar un producto existente
+                    </small>
                 </div>
                 
                 <div class="form-group">
@@ -46,6 +56,7 @@
                         <!-- Compras: mostrar Almacén General -->
                         <input type="text" value="Almacén General" readonly 
                                style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #f3f4f6; color: #1f2937; cursor: not-allowed;">
+                        <input type="hidden" name="sub_almacen_id" value="100">
                         <small style="color: #6b7280; display: block; margin-top: 5px;">
                             <i class="fas fa-info-circle"></i> Los productos se agregarán al Almacén General
                         </small>
@@ -136,111 +147,184 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const codigoInput = document.getElementById('codigo');
     const nombreInput = document.getElementById('nombre');
+    const codigoInput = document.getElementById('codigo');
+    const autocompleteDiv = document.getElementById('nombre-autocomplete');
     const descripcionInput = document.getElementById('descripcion');
     const unidadInput = document.getElementById('unidad');
     const precioInput = document.getElementById('precio_unitario');
     const stockMinimoInput = document.getElementById('stock_minimo');
     
-    console.log('[v0] Autocompletado inicializado para usuario');
-    
-    if (!codigoInput) {
-        console.error('[v0] Campo de código no encontrado');
-        return;
-    }
-    
     let timeoutId = null;
+    let productoSeleccionado = null;
     
-    codigoInput.addEventListener('input', function() {
-        // Limpiar timeout anterior
+    nombreInput.addEventListener('input', function() {
         if (timeoutId) {
             clearTimeout(timeoutId);
         }
         
-        const codigo = this.value.trim();
+        const nombre = this.value.trim();
         
-        console.log('[v0] Código ingresado:', codigo);
-        
-        if (codigo.length < 2) {
-            codigoInput.style.borderColor = '#d1d5db';
-            codigoInput.style.borderWidth = '1px';
-            ocultarMensajeInfo();
+        if (nombre.length === 0) {
+            autocompleteDiv.style.display = 'none';
+            autocompleteDiv.innerHTML = '';
+            productoSeleccionado = null;
+            codigoInput.value = '';
+            codigoInput.readOnly = true;
+            codigoInput.style.background = '#f3f4f6';
+            codigoInput.placeholder = 'Se generará automáticamente';
+            nombreInput.style.borderColor = '#d1d5db';
+            nombreInput.style.borderWidth = '1px';
             return;
         }
         
-        // Esperar 500ms después de que el usuario deje de escribir
+        if (nombre.length < 2) {
+            autocompleteDiv.style.display = 'none';
+            autocompleteDiv.innerHTML = '';
+            return;
+        }
+        
+        autocompleteDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: #6b7280;"><i class="fas fa-spinner fa-spin"></i> Buscando...</div>';
+        autocompleteDiv.style.display = 'block';
+        
         timeoutId = setTimeout(() => {
-            console.log('[v0] Iniciando búsqueda para código:', codigo);
-            
-            fetch(`api/buscar-producto.php?codigo=${encodeURIComponent(codigo)}`)
-                .then(response => {
-                    console.log('[v0] Respuesta HTTP status:', response.status);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
+            fetch(`api/buscar-producto-nombre.php?nombre=${encodeURIComponent(nombre)}`)
+                .then(response => response.json())
                 .then(data => {
-                    console.log('[v0] Datos recibidos:', data);
-                    
-                    if (data.existe) {
-                        // Llenar automáticamente los campos con los datos del producto existente
-                        nombreInput.value = data.producto.nombre;
-                        descripcionInput.value = data.producto.descripcion || '';
-                        unidadInput.value = data.producto.unidad;
-                        precioInput.value = data.producto.precio_unitario || '';
-                        stockMinimoInput.value = data.producto.stock_minimo || '';
-                        
-                        // Cambiar el borde a azul marino para indicar que existe
-                        codigoInput.style.borderColor = '#2962FF';
-                        codigoInput.style.borderWidth = '2px';
-                        
-                        // Mostrar mensaje informativo
-                        mostrarMensajeInfo(`Producto encontrado. Cantidad actual: ${data.producto.cantidad_actual} ${data.producto.unidad}`);
-                        
-                        console.log('[v0] Campos autocompletados correctamente');
+                    if (data.success && data.productos.length > 0) {
+                        mostrarAutocomplete(data.productos);
                     } else {
-                        // Producto no existe, limpiar campos y permitir ingreso nuevo
-                        codigoInput.style.borderColor = '#d1d5db';
-                        codigoInput.style.borderWidth = '1px';
-                        ocultarMensajeInfo();
-                        console.log('[v0] Producto no encontrado, listo para crear nuevo');
+                        mostrarCrearNuevo();
                     }
                 })
                 .catch(error => {
-                    console.error('[v0] Error al buscar producto:', error);
-                    codigoInput.style.borderColor = '#ef4444';
-                    codigoInput.style.borderWidth = '2px';
-                    mostrarMensajeInfo('Error al buscar producto. Verifica la conexión.');
+                    console.error('[v0] Error al buscar productos:', error);
+                    autocompleteDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Error al buscar</div>';
                 });
-        }, 500);
+        }, 300);
     });
     
-    function mostrarMensajeInfo(mensaje) {
-        // Remover mensaje anterior si existe
-        const mensajeAnterior = document.getElementById('mensaje-info-codigo');
-        if (mensajeAnterior) {
-            mensajeAnterior.remove();
-        }
+    function mostrarAutocomplete(productos) {
+        autocompleteDiv.innerHTML = '';
         
-        // Crear nuevo mensaje
-        const mensajeDiv = document.createElement('small');
-        mensajeDiv.id = 'mensaje-info-codigo';
-        mensajeDiv.style.color = '#2962FF';
-        mensajeDiv.style.fontSize = '12px';
-        mensajeDiv.style.marginTop = '4px';
-        mensajeDiv.style.display = 'block';
-        mensajeDiv.innerHTML = '<i class="fas fa-info-circle"></i> ' + mensaje;
+        productos.forEach(producto => {
+            const item = document.createElement('div');
+            item.style.cssText = 'padding: 12px; cursor: pointer; border-bottom: 1px solid #e5e7eb; transition: background 0.2s;';
+            item.innerHTML = `
+                <div style="font-weight: 600; color: #1f2937; margin-bottom: 4px;">${producto.nombre}</div>
+                <div style="font-size: 12px; color: #6b7280;">
+                    <span style="background: rgba(41, 98, 255, 0.1); color: #2962FF; padding: 2px 8px; border-radius: 4px; margin-right: 8px;">${producto.codigo}</span>
+                    <span>Stock total: ${producto.cantidad_total} ${producto.unidad}</span>
+                    ${producto.almacenes_count > 1 ? ` <span style="color: #f59e0b;">• ${producto.almacenes_count} almacenes</span>` : ''}
+                </div>
+            `;
+            
+            item.addEventListener('mouseenter', function() {
+                this.style.background = 'rgba(41, 98, 255, 0.05)';
+            });
+            
+            item.addEventListener('mouseleave', function() {
+                this.style.background = 'white';
+            });
+            
+            item.addEventListener('click', function() {
+                seleccionarProducto(producto);
+            });
+            
+            autocompleteDiv.appendChild(item);
+        });
         
-        codigoInput.parentElement.appendChild(mensajeDiv);
+        const nuevoItem = document.createElement('div');
+        nuevoItem.style.cssText = 'padding: 12px; cursor: pointer; background: rgba(41, 98, 255, 0.05); color: #2962FF; font-weight: 600; border-top: 2px solid #e5e7eb;';
+        nuevoItem.innerHTML = '<i class="fas fa-plus-circle"></i> Crear nuevo producto con este nombre';
+        nuevoItem.addEventListener('mouseenter', function() {
+            this.style.background = 'rgba(41, 98, 255, 0.1)';
+        });
+        nuevoItem.addEventListener('mouseleave', function() {
+            this.style.background = 'rgba(41, 98, 255, 0.05)';
+        });
+        nuevoItem.addEventListener('click', function() {
+            crearNuevoProducto();
+        });
+        autocompleteDiv.appendChild(nuevoItem);
+        
+        autocompleteDiv.style.display = 'block';
     }
     
-    function ocultarMensajeInfo() {
-        const mensajeAnterior = document.getElementById('mensaje-info-codigo');
-        if (mensajeAnterior) {
-            mensajeAnterior.remove();
-        }
+    function mostrarCrearNuevo() {
+        autocompleteDiv.innerHTML = '';
+        
+        const infoItem = document.createElement('div');
+        infoItem.style.cssText = 'padding: 12px; color: #6b7280; text-align: center;';
+        infoItem.innerHTML = '<i class="fas fa-info-circle"></i> No se encontraron productos con ese nombre';
+        autocompleteDiv.appendChild(infoItem);
+        
+        const nuevoItem = document.createElement('div');
+        nuevoItem.style.cssText = 'padding: 12px; cursor: pointer; background: rgba(41, 98, 255, 0.05); color: #2962FF; font-weight: 600; text-align: center;';
+        nuevoItem.innerHTML = '<i class="fas fa-plus-circle"></i> Crear nuevo producto';
+        nuevoItem.addEventListener('click', function() {
+            crearNuevoProducto();
+        });
+        autocompleteDiv.appendChild(nuevoItem);
+        
+        autocompleteDiv.style.display = 'block';
     }
+    
+    function seleccionarProducto(producto) {
+        productoSeleccionado = producto;
+        nombreInput.value = producto.nombre;
+        codigoInput.value = producto.codigo;
+        codigoInput.readOnly = true;
+        codigoInput.style.background = '#f3f4f6';
+        codigoInput.style.cursor = 'not-allowed';
+        descripcionInput.value = producto.descripcion || '';
+        unidadInput.value = producto.unidad;
+        precioInput.value = producto.precio_unitario || '';
+        stockMinimoInput.value = producto.stock_minimo || '10';
+        autocompleteDiv.style.display = 'none';
+        
+        nombreInput.style.borderColor = '#10b981';
+        nombreInput.style.borderWidth = '2px';
+        
+        const tooltip = document.createElement('div');
+        tooltip.style.cssText = 'position: absolute; top: -40px; left: 0; background: #10b981; color: white; padding: 8px 12px; border-radius: 6px; font-size: 12px; white-space: nowrap; z-index: 1000;';
+        tooltip.innerHTML = '<i class="fas fa-check-circle"></i> Producto existente seleccionado. Se usará el mismo código.';
+        nombreInput.parentElement.style.position = 'relative';
+        nombreInput.parentElement.appendChild(tooltip);
+        
+        setTimeout(() => {
+            tooltip.remove();
+        }, 3000);
+    }
+    
+    function crearNuevoProducto() {
+        productoSeleccionado = null;
+        autocompleteDiv.style.display = 'none';
+        codigoInput.value = '';
+        codigoInput.readOnly = true;
+        codigoInput.style.background = '#f3f4f6';
+        codigoInput.placeholder = 'Se generará automáticamente';
+        nombreInput.style.borderColor = '#2962FF';
+        nombreInput.style.borderWidth = '2px';
+        
+        descripcionInput.value = '';
+        unidadInput.value = '';
+        precioInput.value = '';
+        stockMinimoInput.value = '10';
+    }
+    
+    document.addEventListener('click', function(e) {
+        if (!nombreInput.contains(e.target) && !autocompleteDiv.contains(e.target)) {
+            autocompleteDiv.style.display = 'none';
+        }
+    });
+    
+    document.querySelector('form').addEventListener('submit', function(e) {
+        if (productoSeleccionado && !codigoInput.value) {
+            e.preventDefault();
+            alert('Error: El código del producto no se ha cargado correctamente. Por favor, selecciona el producto nuevamente.');
+            return false;
+        }
+    });
 });
 </script>

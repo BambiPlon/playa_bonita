@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if ($usuarioData['rol'] === 'compras') {
         $puede_agregar = true;
-        $sub_almacen_id = null;
+        $sub_almacen_id = 100;
     } elseif ($puede_seleccionar) {
         if ($sub_almacen_id) {
             $puede_agregar = true;
@@ -104,7 +104,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mensaje = 'Producto agregado exitosamente al inventario.';
                 $tipo_mensaje = 'success';
             } elseif (is_array($resultado) && isset($resultado['error'])) {
-                $mensaje = $resultado['message'];
+                if ($resultado['error'] === 'duplicate') {
+                    $mensaje = 'El producto ya existe en este sub-almacén. Usa el mismo código para agregar más unidades.';
+                } else {
+                    $mensaje = $resultado['message'];
+                }
                 $tipo_mensaje = 'danger';
             } else {
                 $mensaje = 'Error al agregar el producto. Por favor intenta nuevamente.';

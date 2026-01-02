@@ -16,7 +16,13 @@ if ($user && isset($user['sub_almacen_id'])) {
 $dashboardController = new DashboardController();
 
 $sub_almacen_filter = null;
-if ($user['rol'] === 'admin' && isset($_GET['sub_almacen'])) {
+
+if ($user['rol'] === 'compras') {
+    $sub_almacen_filter = 100;
+} elseif (in_array($user['rol'], ['gerencia', 'gerencia_general'])) {
+    // Para gerencia, pueden ver otros almacenes pero por defecto ven el general
+    $sub_almacen_filter = isset($_GET['sub_almacen']) ? intval($_GET['sub_almacen']) : 100;
+} elseif ($user['rol'] === 'admin' && isset($_GET['sub_almacen'])) {
     $sub_almacen_filter = $_GET['sub_almacen'];
 }
 

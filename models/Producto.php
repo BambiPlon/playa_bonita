@@ -7,9 +7,9 @@ class Producto {
     }
     
     public function buscarPorCodigo($codigo, $sub_almacen_id = null) {
-        if ($sub_almacen_id === null) {
-            // Para compras (almacén general)
-            $sql = "SELECT * FROM inventario WHERE codigo = ? AND sub_almacen_id IS NULL";
+        if ($sub_almacen_id === null || $sub_almacen_id == 100) {
+            // Para compras (almacén general ID 100)
+            $sql = "SELECT * FROM inventario WHERE codigo = ? AND sub_almacen_id = 100";
             $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("s", $codigo);
         } else {
@@ -18,6 +18,17 @@ class Producto {
             $stmt->bind_param("si", $codigo, $sub_almacen_id);
         }
         
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $producto = $result->fetch_assoc();
+        $stmt->close();
+        return $producto;
+    }
+    
+    public function buscarPorCodigoGlobal($codigo) {
+        $sql = "SELECT * FROM inventario WHERE codigo = ? LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("s", $codigo);
         $stmt->execute();
         $result = $stmt->get_result();
         $producto = $result->fetch_assoc();
@@ -118,14 +129,48 @@ class Producto {
         return $producto;
     }
     
+    public function buscarPorNombreParcial($nombre_parcial, $limit = 10) {
+        $sql = "SELECT 
+                    MIN(id) as primer_id,
+                    codigo, 
+                    nombre, 
+                    unidad, 
+                    precio_unitario, 
+                    stock_minimo, 
+                    descripcion, 
+                    SUM(cantidad) as cantidad_total,
+                    COUNT(DISTINCT sub_almacen_id) as almacenes_count
+                FROM inventario 
+                WHERE nombre LIKE ? AND (activo = 1 OR activo IS NULL)
+                GROUP BY nombre, codigo, unidad, precio_unitario, stock_minimo, descripcion
+                ORDER BY nombre
+                LIMIT ?";
+        
+        $stmt = $this->conn->prepare($sql);
+        $search_term = "%" . $nombre_parcial . "%";
+        $stmt->bind_param("si", $search_term, $limit);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $productos = [];
+        
+        while ($row = $result->fetch_assoc()) {
+            $productos[] = $row;
+        }
+        
+        $stmt->close();
+        return $productos;
+    }
+    
     public function obtenerInventario($sub_almacen_id = null, $rol = null, $user_sub_almacen_id = null) {
         $sql = "SELECT i.*, s.nombre as sub_almacen_nombre 
                 FROM inventario i 
                 INNER JOIN sub_almacenes s ON i.sub_almacen_id = s.id";
         
-        if ($sub_almacen_id == 100) {
+        if ($rol === 'compras') {
             $sql .= " WHERE i.sub_almacen_id = 100";
-        } elseif ($rol !== 'admin' && $rol !== 'compras' && $rol !== 'gerencia' && $rol !== 'gerencia_general') {
+        } elseif ($sub_almacen_id == 100) {
+            $sql .= " WHERE i.sub_almacen_id = 100";
+        } elseif ($rol !== 'admin' && $rol !== 'gerencia' && $rol !== 'gerencia_general') {
             $sql .= " WHERE i.sub_almacen_id = " . intval($user_sub_almacen_id);
         } elseif ($sub_almacen_id) {
             $sql .= " WHERE i.sub_almacen_id = " . intval($sub_almacen_id);
@@ -175,10 +220,7 @@ class Producto {
             'productos_bajo_stock' => 0
         ];
         
-        $where_clause = "";
-        if ($rol !== 'admin' && $rol !== 'compras' && $rol !== 'gerencia' && $rol !== 'gerencia_general') {
-            $where_clause = " WHERE sub_almacen_id = " . intval($user_sub_almacen_id);
-        }
+        $where_clause = " WHERE sub_almacen_id = 100";
         
         $sql = "SELECT COUNT(*) as total, 
                 SUM(cantidad * precio_unitario) as valor_total,
@@ -192,6 +234,57 @@ class Producto {
         }
         
         return $stats;
+    }
+    
+    public function toggleEstadoActivo($producto_id, $nuevo_estado) {
+        $sql = "UPDATE inventario SET activo = ?, updated_at = NOW() WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("ii", $nuevo_estado, $producto_id);
+        $result = $stmt->execute();
+        $stmt->close();
+        return $result;
+    }
+    
+    public function obtenerPorId($producto_id) {
+        $sql = "SELECT i.*, s.nombre as sub_almacen_nombre 
+                FROM inventario i 
+                LEFT JOIN sub_almacenes s ON i.sub_almacen_id = s.id 
+                WHERE i.id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $producto_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $producto = $result->fetch_assoc();
+        $stmt->close();
+        return $producto;
+    }
+    
+    public function actualizar($producto_id, $datos) {
+        try {
+            $sql = "UPDATE inventario 
+                    SET nombre = ?, descripcion = ?, cantidad = ?, unidad = ?, 
+                        precio_unitario = ?, stock_minimo = ?, sub_almacen_id = ?, 
+                        updated_at = NOW() 
+                    WHERE id = ?";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("ssisdiis", 
+                $datos['nombre'],
+                $datos['descripcion'],
+                $datos['cantidad'],
+                $datos['unidad'],
+                $datos['precio_unitario'],
+                $datos['stock_minimo'],
+                $datos['sub_almacen_id'],
+                $producto_id
+            );
+            
+            $result = $stmt->execute();
+            $stmt->close();
+            return $result;
+        } catch (mysqli_sql_exception $e) {
+            return ['error' => 'database', 'message' => 'Error al actualizar el producto: ' . $e->getMessage()];
+        }
     }
     
     public function __destruct() {

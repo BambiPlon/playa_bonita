@@ -18,15 +18,9 @@ if (!isset($_GET['codigo'])) {
 }
 
 $codigo = $_GET['codigo'];
-$sub_almacen_id = $_SESSION['user_sub_almacen_id'] ?? null;
-
-// Si el usuario es de compras, buscar en almacén general (null)
-if ($_SESSION['user_rol'] === 'compras') {
-    $sub_almacen_id = null;
-}
 
 $producto_model = new Producto();
-$producto = $producto_model->buscarPorCodigo($codigo, $sub_almacen_id);
+$producto = $producto_model->buscarPorCodigoGlobal($codigo);
 
 header('Content-Type: application/json');
 
@@ -35,14 +29,16 @@ if ($producto) {
         'existe' => true,
         'producto' => [
             'id' => $producto['id'],
+            'codigo' => $producto['codigo'],
             'nombre' => $producto['nombre'],
-            'descripcion' => $producto['descripcion'],
+            'descripcion' => $producto['descripcion'] ?? '',
             'unidad' => $producto['unidad'],
-            'precio_unitario' => $producto['precio_unitario'],
-            'stock_minimo' => $producto['stock_minimo'],
+            'precio_unitario' => $producto['precio_unitario'] ?? 0,
+            'stock_minimo' => $producto['stock_minimo'] ?? 10,
             'cantidad_actual' => $producto['cantidad']
         ]
     ]);
 } else {
     echo json_encode(['existe' => false]);
 }
+?>

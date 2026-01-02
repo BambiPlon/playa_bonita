@@ -242,10 +242,10 @@ document.addEventListener('DOMContentLoaded', function() {
 // Mostrar mensajes de sesión si existen
 <?php if (isset($_SESSION['mensaje'])): ?>
     Swal.fire({
-        icon: '<?php echo $_SESSION['tipo_mensaje'] === 'error' ? 'error' : ($_SESSION['tipo_mensaje'] === 'warning' ? 'warning' : 'success'); ?>',
-        title: '<?php echo $_SESSION['tipo_mensaje'] === 'error' ? 'Error' : ($_SESSION['tipo_mensaje'] === 'warning' ? 'Atención' : 'Éxito'); ?>',
+        icon: '<?php echo ($_SESSION['tipo_mensaje'] === 'error' || $_SESSION['tipo_mensaje'] === 'danger') ? 'error' : ($_SESSION['tipo_mensaje'] === 'warning' ? 'warning' : 'success'); ?>',
+        title: '<?php echo ($_SESSION['tipo_mensaje'] === 'error' || $_SESSION['tipo_mensaje'] === 'danger') ? 'Error' : ($_SESSION['tipo_mensaje'] === 'warning' ? 'Atención' : 'Éxito'); ?>',
         text: '<?php echo addslashes($_SESSION['mensaje']); ?>',
-        confirmButtonColor: '#10b981',
+        confirmButtonColor: '<?php echo ($_SESSION['tipo_mensaje'] === 'error' || $_SESSION['tipo_mensaje'] === 'danger') ? '#ef4444' : ($_SESSION['tipo_mensaje'] === 'warning' ? '#f59e0b' : '#10b981'); ?>',
         timer: 4000,
         timerProgressBar: true
     });

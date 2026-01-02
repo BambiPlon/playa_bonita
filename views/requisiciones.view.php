@@ -1,4 +1,5 @@
 <?php require 'includes/header.php'; ?>
+<?php require 'includes/modal-system.php'; ?>
 <?php // Eliminando require duplicado del sidebar ya que header.php ya lo incluye ?>
 
 <!-- Cambiando fondo oscuro a fondo claro -->
@@ -216,6 +217,16 @@
                                 </span>
                             <?php endif; ?>
                             
+                            <!-- Agregando botón para ocultar requisiciones rechazadas -->
+                            <?php if ($req['estado'] === 'rechazada' && ($user['rol'] === 'compras' || $req['usuario_id'] == $user['id'])): ?>
+                                <button type="button" 
+                                        class="btn btn-sm btn-danger ocultar-requisicion-btn"
+                                        data-req-id="<?php echo $req['id']; ?>"
+                                        data-req-folio="<?php echo htmlspecialchars($req['folio']); ?>">
+                                    <i class="fas fa-trash"></i> Ocultar
+                                </button>
+                            <?php endif; ?>
+                            
                             <?php if ($user['rol'] === 'admin'): ?>
                                 <form method="POST" style="display: inline;">
                                     <input type="hidden" name="requisicion_id" value="<?php echo $req['id']; ?>">
@@ -260,43 +271,76 @@ document.addEventListener('DOMContentLoaded', function() {
     const checkboxes = document.querySelectorAll('.req-checkbox');
     const btnImprimir = document.getElementById('btn-imprimir-seleccionadas');
     
-    if (!btnImprimir) return;
-    
-    function actualizarBotonImprimir() {
-        const seleccionadas = Array.from(checkboxes).filter(cb => cb.checked);
-        btnImprimir.disabled = seleccionadas.length === 0;
-        btnImprimir.innerHTML = `<i class="fas fa-print"></i> Imprimir ${seleccionadas.length} Requisicion(es) por Proveedor`;
+    if (btnImprimir) {
+        function actualizarBotonImprimir() {
+            const seleccionadas = Array.from(checkboxes).filter(cb => cb.checked);
+            btnImprimir.disabled = seleccionadas.length === 0;
+            btnImprimir.innerHTML = `<i class="fas fa-print"></i> Imprimir ${seleccionadas.length} Requisicion(es) por Proveedor`;
+        }
+        
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', actualizarBotonImprimir);
+        });
+        
+        btnImprimir.addEventListener('click', function() {
+            const seleccionadas = Array.from(checkboxes)
+                .filter(cb => cb.checked)
+                .map(cb => cb.dataset.reqId);
+            
+            if (seleccionadas.length > 0) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = 'imprimir-requisiciones.php';
+                form.target = '_blank';
+                
+                seleccionadas.forEach(id => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'requisiciones[]';
+                    input.value = id;
+                    form.appendChild(input);
+                });
+                
+                document.body.appendChild(form);
+                form.submit();
+                document.body.removeChild(form);
+            }
+        });
     }
     
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', actualizarBotonImprimir);
-    });
+    const botonesOcultar = document.querySelectorAll('.ocultar-requisicion-btn');
     
-    btnImprimir.addEventListener('click', function() {
-        const seleccionadas = Array.from(checkboxes)
-            .filter(cb => cb.checked)
-            .map(cb => cb.dataset.reqId);
-        
-        if (seleccionadas.length > 0) {
-            // Crear un formulario temporal para enviar por POST
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = 'imprimir-requisiciones.php'; // Cambiando action a imprimir-requisiciones.php
-            form.target = '_blank';
+    botonesOcultar.forEach(boton => {
+        boton.addEventListener('click', function() {
+            const reqId = this.dataset.reqId;
+            const reqFolio = this.dataset.reqFolio;
             
-            // Agregar los IDs como inputs
-            seleccionadas.forEach(id => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'requisiciones[]';
-                input.value = id;
-                form.appendChild(input);
+            const mensaje = `¿Está seguro que desea OCULTAR la requisición ${reqFolio}?`;
+            const descripcion = 'La requisición se ocultará de su vista pero permanecerá en el sistema.';
+            
+            CustomModal.showConfirm(mensaje, descripcion, () => {
+                fetch('controllers/ocultar-requisicion.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ requisicion_id: reqId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        CustomModal.showSuccess('Requisición ocultada exitosamente.');
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        alert('Error al ocultar la requisición: ' + (data.message || 'Error desconocido'));
+                    }
+                })
+                .catch(error => {
+                    console.error('[v0] Error:', error);
+                    alert('Error al procesar la solicitud');
+                });
             });
-            
-            document.body.appendChild(form);
-            form.submit();
-            document.body.removeChild(form);
-        }
+        });
     });
 });
 </script>

@@ -79,11 +79,11 @@ class Requisicion {
             $conditions[] = "r.usuario_id = " . intval($user_id);
         } elseif ($rol === 'compras') {
             if (!$estado) {
-                $conditions[] = "(r.estado = 'pendiente' OR r.estado = 'en_compras' OR r.estado = 'en_gerencia' OR r.estado = 'aprobada')";
+                $conditions[] = "(r.estado != 'rechazada')";
             }
         } elseif ($rol === 'gerencia' || $rol === 'gerencia_general') {
             if (!$estado) {
-                $conditions[] = "(r.estado = 'en_gerencia' OR r.estado = 'en_gerencia_general' OR r.estado = 'aprobada' OR r.estado = 'rechazada')";
+                $conditions[] = "r.estado != 'rechazada'";
             }
         }
         
@@ -224,6 +224,15 @@ class Requisicion {
                 WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("ii", $usuario_id, $requisicion_id);
+        $result = $stmt->execute();
+        $stmt->close();
+        return $result;
+    }
+    
+    public function ocultarRequisicion($requisicion_id) {
+        $sql = "UPDATE requisiciones SET oculta = 1 WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $requisicion_id);
         $result = $stmt->execute();
         $stmt->close();
         return $result;
