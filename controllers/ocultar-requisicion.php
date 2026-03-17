@@ -25,7 +25,7 @@ $requisicion_id = intval($data['requisicion_id']);
 $user_id = $_SESSION['user_id'];
 $user_rol = $_SESSION['user_rol'];
 
-// Verificar que la requisición existe y está rechazada
+// Verificar que la requisición existe y está en un estado final
 $requisicionModel = new Requisicion();
 $requisicion = $requisicionModel->obtenerPorId($requisicion_id);
 
@@ -35,21 +35,20 @@ if (!$requisicion) {
     exit;
 }
 
-if ($requisicion['estado'] !== 'rechazada') {
+if (!in_array($requisicion['estado'], ['rechazada', 'aprobada', 'completada'])) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Solo se pueden ocultar requisiciones rechazadas']);
+    echo json_encode(['success' => false, 'message' => 'Solo se pueden ocultar requisiciones en estados finales (aprobadas, rechazadas o completadas)']);
     exit;
 }
 
-// Verificar permisos: solo el creador de la requisición o compras pueden ocultarla
-if ($requisicion['usuario_id'] != $user_id && $user_rol !== 'compras' && $user_rol !== 'admin') {
+// Verificar permisos: el creador, compras o admin pueden ocultarla
+if ($requisicion['usuario_id'] != $user_id && !in_array($user_rol, ['compras', 'admin'])) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'No tienes permisos para ocultar esta requisición']);
     exit;
 }
 
-// Ocultar la requisición
-if ($requisicionModel->ocultarRequisicion($requisicion_id)) {
+if ($requisicionModel->ocultarRequisicionParaUsuario($requisicion_id, $user_id)) {
     echo json_encode(['success' => true, 'message' => 'Requisición ocultada correctamente']);
 } else {
     http_response_code(500);

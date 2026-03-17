@@ -57,6 +57,9 @@ if ($req['agregado_a_inventario'] == 1) {
 // Obtener detalles de la requisición
 $detalles = $requisicion->obtenerDetalles($requisicion_id);
 
+// DEBUG: Ver que datos llegan de los detalles
+file_put_contents('debug_agregar_inv.log', date('Y-m-d H:i:s') . " - Detalles: " . print_r($detalles, true) . "\n", FILE_APPEND);
+
 $conn = getConnection();
 
 if ($puede_agregar_almacen_general) {
@@ -76,14 +79,31 @@ foreach ($detalles as $detalle) {
     
     $nombre = trim($detalle['producto_nombre']);
     $cantidad = intval($detalle['cantidad']);
-    $unidad = trim($detalle['unidad']);
+    // Asegurar que la unidad siempre tenga valor - usar de detalle o de inventario original
+    $unidad_detalle = isset($detalle['unidad']) ? trim($detalle['unidad']) : '';
+    $unidad = !empty($unidad_detalle) ? $unidad_detalle : 'pieza';
     $precio = floatval($detalle['precio_cotizado'] ?? 0);
     $codigo_original = trim($detalle['codigo_original'] ?? '');
     
     $producto_existente = null;
     
-    if (!empty($codigo_original)) {
-        $sql_check = "SELECT id, cantidad, sub_almacen_id FROM inventario 
+    // Si no hay codigo, buscar por nombre + unidad + almacen
+    if (empty($codigo_original)) {
+        $sql_nombre = "SELECT id, cantidad, unidad, sub_almacen_id FROM inventario 
+                       WHERE nombre = ? AND sub_almacen_id = ? AND LOWER(unidad) = LOWER(?)
+                       LIMIT 1";
+        $stmt_nombre = $conn->prepare($sql_nombre);
+        $stmt_nombre->bind_param("sis", $nombre, $almacen_destino_id, $unidad);
+        $stmt_nombre->execute();
+        $result_nombre = $stmt_nombre->get_result();
+        if ($result_nombre->num_rows > 0) {
+            $producto_existente = $result_nombre->fetch_assoc();
+        }
+        $stmt_nombre->close();
+    }
+    
+    if (!$producto_existente && !empty($codigo_original)) {
+        $sql_check = "SELECT id, cantidad, unidad, sub_almacen_id FROM inventario 
                       WHERE codigo = ? 
                       AND sub_almacen_id = ?
                       LIMIT 1";
@@ -93,7 +113,14 @@ foreach ($detalles as $detalle) {
         $result_check = $stmt_check->get_result();
         
         if ($result_check->num_rows > 0) {
-            $producto_existente = $result_check->fetch_assoc();
+            $row_found = $result_check->fetch_assoc();
+            // Si la unidad es diferente, tratar como producto nuevo
+            if (!empty($unidad) && strtolower(trim($row_found['unidad'])) !== strtolower($unidad)) {
+                $producto_existente = null;
+                $codigo_original = 'ALM-' . $almacen_destino_id . '-' . strtoupper(substr(md5(uniqid(rand(), true)), 0, 6));
+            } else {
+                $producto_existente = $row_found;
+            }
         } else {
             // Verificar si el código existe en otro sub-almacén
             $sql_check_global = "SELECT id FROM inventario WHERE codigo = ? LIMIT 1";
@@ -102,9 +129,9 @@ foreach ($detalles as $detalle) {
             $stmt_check_global->execute();
             $result_check_global = $stmt_check_global->get_result();
             
-            // Si el código existe en otro sub-almacén, generar uno nuevo con sufijo
+            // Si el código existe en otro sub-almacén, generar uno nuevo unico
             if ($result_check_global->num_rows > 0) {
-                $codigo_original = $codigo_original . '-SA' . $almacen_destino_id;
+                $codigo_original = 'ALM-' . $almacen_destino_id . '-' . strtoupper(substr(md5(uniqid(rand(), true)), 0, 6));
             }
             $stmt_check_global->close();
         }
@@ -132,8 +159,24 @@ foreach ($detalles as $detalle) {
         $stmt_update->close();
     } else {
         // Si no existe, crear nuevo producto en el almacén destino
-        if (empty($codigo_original)) {
-            $codigo_original = 'ALM-' . $almacen_destino_id . '-' . time() . rand(100, 999);
+        // Generar codigo unico garantizado
+        $codigo_unico = false;
+        $intentos = 0;
+        while (!$codigo_unico && $intentos < 10) {
+            if (empty($codigo_original) || $intentos > 0) {
+                $codigo_original = 'ALM-' . $almacen_destino_id . '-' . strtoupper(substr(md5(uniqid(rand(), true)), 0, 6));
+            }
+            // Verificar que no exista
+            $sql_verify = "SELECT id FROM inventario WHERE codigo = ? AND sub_almacen_id = ? LIMIT 1";
+            $stmt_verify = $conn->prepare($sql_verify);
+            $stmt_verify->bind_param("si", $codigo_original, $almacen_destino_id);
+            $stmt_verify->execute();
+            $result_verify = $stmt_verify->get_result();
+            if ($result_verify->num_rows === 0) {
+                $codigo_unico = true;
+            }
+            $stmt_verify->close();
+            $intentos++;
         }
         
         $sql_insert = "INSERT INTO inventario (codigo, nombre, sub_almacen_id, cantidad, unidad, precio_unitario, stock_minimo) 
@@ -151,7 +194,7 @@ foreach ($detalles as $detalle) {
 }
 
 // Marcar la requisición como agregada al inventario
-$sql_marcar = "UPDATE requisiciones SET agregado_a_inventario = 1, estado = 'completada' WHERE id = ?";
+$sql_marcar = "UPDATE requisiciones SET agregado_a_inventario = 1 WHERE id = ?";
 $stmt_marcar = $conn->prepare($sql_marcar);
 $stmt_marcar->bind_param("i", $requisicion_id);
 $stmt_marcar->execute();

@@ -10,13 +10,15 @@ function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
     
-    sidebar.classList.toggle('collapsed');
-    
-    // En mobile, mostrar/ocultar overlay
     if (window.innerWidth <= 768) {
+        // En mobile: toggle active class para slide-in
+        sidebar.classList.toggle('active');
+        sidebar.classList.remove('collapsed');
         overlay.classList.toggle('active');
-        // Prevenir scroll del body cuando el sidebar está abierto
-        document.body.style.overflow = sidebar.classList.contains('collapsed') ? 'auto' : 'hidden';
+        document.body.style.overflow = sidebar.classList.contains('active') ? 'hidden' : 'auto';
+    } else {
+        // En desktop: toggle collapsed
+        sidebar.classList.toggle('collapsed');
     }
 }
 

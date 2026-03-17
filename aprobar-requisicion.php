@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute();
             $result = $stmt->get_result();
             
-            $rol_rechazo = $user['rol'] === 'gerencia_general' ? 'Gerencia General' : 'Gerencia';
+            $rol_rechazo = $user['rol'] === 'gerencia_general' ? 'Gerencia Administrativa' : 'Gerencia';
             while ($compras = $result->fetch_assoc()) {
                 $titulo = "Requisición Rechazada";
                 $mensaje = "La requisición REQ-{$requisicion_id} ha sido rechazada por {$rol_rechazo}.";
@@ -74,13 +74,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmtNot->close();
             }
             
-            $_SESSION['mensaje'] = 'Requisición rechazada correctamente';
+            // Auto-ocultar para el usuario de gerencia/gerencia_general que rechaza
+            $stmtOcultar = $db->prepare("INSERT IGNORE INTO requisiciones_ocultas (requisicion_id, usuario_id) VALUES (?, ?)");
+            $stmtOcultar->bind_param("ii", $requisicion_id, $user['id']);
+            $stmtOcultar->execute();
+            $stmtOcultar->close();
+            
+            // Si gerencia_general rechaza, tambien ocultar para gerencia
+            if ($user['rol'] === 'gerencia_general') {
+                $stmtGerencia = $db->prepare("SELECT id FROM usuarios WHERE rol = 'gerencia' AND activo = 1");
+                $stmtGerencia->execute();
+                $resultGerencia = $stmtGerencia->get_result();
+                while ($gerente = $resultGerencia->fetch_assoc()) {
+                    $stmtOcultarG = $db->prepare("INSERT IGNORE INTO requisiciones_ocultas (requisicion_id, usuario_id) VALUES (?, ?)");
+                    $stmtOcultarG->bind_param("ii", $requisicion_id, $gerente['id']);
+                    $stmtOcultarG->execute();
+                    $stmtOcultarG->close();
+                }
+                $stmtGerencia->close();
+            }
+            
+            $_SESSION['mensaje'] = 'Requisicion rechazada correctamente';
             $_SESSION['tipo_mensaje'] = 'warning';
             
         } elseif ($accion === 'aprobar') {
             $articulosAprobados = $_POST['articulos_aprobados'] ?? [];
             $cantidades = $_POST['cantidades'] ?? [];
             $justificaciones = $_POST['justificaciones'] ?? [];
+            $justificacionGeneral = trim($_POST['justificacion_general'] ?? '');
             
             if (empty($articulosAprobados)) {
                 throw new Exception('Debe aprobar al menos un artículo');
@@ -124,14 +145,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->close();
             
             if ($user['rol'] === 'gerencia') {
-                // Gerencia envía a Gerencia General
+                // Gerencia envía a Gerencia Administrativa
                 $nuevoEstado = 'en_gerencia_general';
                 $stmt = $db->prepare("UPDATE requisiciones SET estado = ?, aprobado_por = ?, fecha_aprobacion = NOW(), monto_cotizado = ?, justificacion_rechazo = ? WHERE id = ?");
                 $stmt->bind_param("sidsi", $nuevoEstado, $user['id'], $montoAprobado, $justificacionGeneral, $requisicion_id);
                 $stmt->execute();
                 $stmt->close();
                 
-                // Notificar a Gerencia General
+                // Ocultar para el usuario actual (gerencia) después de aprobar
+                $stmtOcultar = $db->prepare("INSERT IGNORE INTO requisiciones_ocultas (requisicion_id, usuario_id) VALUES (?, ?)");
+                $stmtOcultar->bind_param("ii", $requisicion_id, $user['id']);
+                $stmtOcultar->execute();
+                $stmtOcultar->close();
+                
+                // Notificar a Gerencia Administrativa
                 $stmt = $db->prepare("SELECT id FROM usuarios WHERE rol = 'gerencia_general' AND activo = 1");
                 $stmt->execute();
                 $result = $stmt->get_result();
@@ -151,15 +178,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $stmt->close();
                 
-                $_SESSION['mensaje'] = 'Requisición enviada a Gerencia General para aprobación final';
+                $_SESSION['mensaje'] = 'Requisición enviada a Gerencia Administrativa para aprobación final';
                 
             } else if ($user['rol'] === 'gerencia_general') {
-                // Gerencia General aprueba finalmente
+                // Gerencia Administrativa aprueba finalmente
                 $nuevoEstado = 'aprobada';
                 $stmt = $db->prepare("UPDATE requisiciones SET estado = ?, aprobado_por_general = ?, fecha_aprobacion_general = NOW(), monto_cotizado = ?, justificacion_rechazo = ? WHERE id = ?");
                 $stmt->bind_param("sidsi", $nuevoEstado, $user['id'], $montoAprobado, $justificacionGeneral, $requisicion_id);
                 $stmt->execute();
                 $stmt->close();
+                
+                // Ocultar para el usuario actual (gerencia_general)
+                $stmtOcultar = $db->prepare("INSERT IGNORE INTO requisiciones_ocultas (requisicion_id, usuario_id) VALUES (?, ?)");
+                $stmtOcultar->bind_param("ii", $requisicion_id, $user['id']);
+                $stmtOcultar->execute();
+                $stmtOcultar->close();
+                
+                // Ocultar para usuarios de gerencia
+                $stmtGerencia = $db->prepare("SELECT id FROM usuarios WHERE rol = 'gerencia' AND activo = 1");
+                $stmtGerencia->execute();
+                $resultGerencia = $stmtGerencia->get_result();
+                while ($gerente = $resultGerencia->fetch_assoc()) {
+                    $stmtOcultarG = $db->prepare("INSERT IGNORE INTO requisiciones_ocultas (requisicion_id, usuario_id) VALUES (?, ?)");
+                    $stmtOcultarG->bind_param("ii", $requisicion_id, $gerente['id']);
+                    $stmtOcultarG->execute();
+                    $stmtOcultarG->close();
+                }
+                $stmtGerencia->close();
                 
                 // Notificar a Compras
                 $stmt = $db->prepare("SELECT id FROM usuarios WHERE rol = 'compras' AND activo = 1");
@@ -170,8 +215,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $totalArticulos = count($todosArticulos);
                 
                 while ($compras = $result->fetch_assoc()) {
-                    $titulo = "Requisición Aprobada por Gerencia General";
-                    $mensaje = "La requisición REQ-{$requisicion_id} ha sido aprobada por Gerencia General. Artículos aprobados: {$articulosAprobadosCount}/{$totalArticulos}. Monto total: $" . number_format($montoAprobado, 2);
+                    $titulo = "Requisición Aprobada por Gerencia Administrativa";
+                    $mensaje = "La requisición REQ-{$requisicion_id} ha sido aprobada por Gerencia Administrativa. Artículos aprobados: {$articulosAprobadosCount}/{$totalArticulos}. Monto total: $" . number_format($montoAprobado, 2);
                     $tipo = "aprobada";
                     
                     $stmtNot = $db->prepare("INSERT INTO notificaciones (usuario_id, tipo, titulo, mensaje, requisicion_id, created_at, leida) VALUES (?, ?, ?, ?, ?, NOW(), 0)");
@@ -191,7 +236,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 if ($requisicion) {
                     $titulo = "Tu Requisición fue Aprobada";
-                    $mensaje = "Tu requisición REQ-{$requisicion_id} ha sido aprobada por Gerencia General. Artículos aprobados: {$articulosAprobadosCount}/{$totalArticulos}.";
+                    $mensaje = "Tu requisición REQ-{$requisicion_id} ha sido aprobada por Gerencia Administrativa. Artículos aprobados: {$articulosAprobadosCount}/{$totalArticulos}.";
                     $tipo = "aprobada";
                     
                     $stmtNot = $db->prepare("INSERT INTO notificaciones (usuario_id, tipo, titulo, mensaje, requisicion_id, created_at, leida) VALUES (?, ?, ?, ?, ?, NOW(), 0)");

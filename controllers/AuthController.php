@@ -40,8 +40,13 @@ class AuthController {
     
     public function checkPermission($required_role = null) {
         if (!$this->isLoggedIn()) {
-            header('Location: login.php');
-            exit();
+            // Evitar redireccion infinita
+            $current_page = basename($_SERVER['PHP_SELF']);
+            if ($current_page !== 'login.php') {
+                header('Location: login.php');
+                exit();
+            }
+            return;
         }
         
         if ($required_role && $_SESSION['user_rol'] !== 'admin' && $_SESSION['user_rol'] !== $required_role) {

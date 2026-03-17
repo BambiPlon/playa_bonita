@@ -1,141 +1,87 @@
 <?php require 'includes/header.php'; ?>
 
-<main class="main-content" style="width: 100%; padding: 20px; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); min-height: 100vh;">
-    <div style="background: white; color: #1f2937; padding: 25px 30px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(41, 98, 255, 0.2);">
-        <h1 style="margin: 0; font-size: 28px; display: flex; align-items: center; gap: 12px;">
-            <div style="background: rgba(41, 98, 255, 0.1); padding: 12px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                <i class="fas fa-plus-circle" style="color: #2962FF; font-size: 24px;"></i>
-            </div>
-            Agregar Producto al Inventario
-        </h1>
-        <a href="index.php" class="btn btn-secondary" style="background: rgba(41, 98, 255, 0.1); color: #2962FF; border: 2px solid #2962FF; padding: 10px 20px; border-radius: 8px; text-decoration: none; transition: all 0.3s; font-weight: 600;">
+<main class="main-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div>
+            <h1 style="margin: 0 0 4px 0; font-size: 1.5rem; font-weight: 700; color: var(--gray-900);">Agregar Producto</h1>
+            <p style="margin: 0; color: var(--text-muted); font-size: 0.8125rem;">Registra un nuevo producto al inventario</p>
+        </div>
+        <a href="index.php" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
             <i class="fas fa-arrow-left"></i> Volver
         </a>
     </div>
 
     <?php if (!empty($mensaje)): ?>
-        <div class="alert alert-<?php echo $tipo_mensaje; ?>" style="margin-bottom: 20px; padding: 15px; border-radius: 8px; <?php echo $tipo_mensaje === 'success' ? 'background: rgba(41, 98, 255, 0.1); border: 1px solid #2962FF; color: #2962FF;' : 'background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444;'; ?>">
-            <?php echo htmlspecialchars($mensaje); ?>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 1rem 1.25rem; border-radius: 12px; margin-bottom: 1rem; <?php echo $tipo_mensaje === 'success' ? 'background: var(--success-light); border: 1px solid #bbf7d0; color: #166534;' : 'background: var(--danger-light); border: 1px solid #fecaca; color: #991b1b;'; ?>">
+            <i class="fas fa-<?php echo $tipo_mensaje === 'success' ? 'check-circle' : 'exclamation-circle'; ?>" style="font-size: 1.125rem;"></i>
+            <span style="font-weight: 500; font-size: 0.875rem;"><?php echo htmlspecialchars($mensaje); ?></span>
         </div>
     <?php endif; ?>
 
-    <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 30px; border: 1px solid rgba(41, 98, 255, 0.2);">
+    <div class="card">
         <form method="POST" action="agregar-producto.php">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px;">
-                <!-- Cambiando el campo de nombre para que sea autocomplete en lugar de código -->
-                <div class="form-group">
-                    <label for="nombre" style="display: flex; align-items: center; gap: 8px; color: #374151; font-weight: 600; margin-bottom: 8px;">
-                        <i class="fas fa-box" style="color: #2962FF;"></i> Nombre del Producto: *
+            <input type="hidden" name="sub_almacen_id" value="100">
+            <input type="hidden" name="cantidad" value="0">
+            <input type="hidden" name="stock_minimo" value="0">
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem;">
+                <div style="grid-column: span 2;">
+                    <label style="display: flex; align-items: center; gap: 6px; color: var(--gray-700); font-weight: 600; margin-bottom: 6px; font-size: 0.8125rem;">
+                        <i class="fas fa-box" style="color: var(--primary); font-size: 0.75rem;"></i> Nombre del Producto <span style="color: var(--danger);">*</span>
                     </label>
                     <div style="position: relative;">
                         <input type="text" id="nombre" name="nombre" required 
                                placeholder="Escribe el nombre del producto..." 
                                autocomplete="off"
-                               style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; color: #1f2937;">
-                        <div id="nombre-autocomplete" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #d1d5db; border-top: none; border-radius: 0 0 8px 8px; max-height: 300px; overflow-y: auto; display: none; z-index: 1000; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"></div>
+                               class="form-input">
+                        <div id="nombre-autocomplete" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--gray-200); border-top: none; border-radius: 0 0 10px 10px; max-height: 280px; overflow-y: auto; display: none; z-index: 1000; box-shadow: 0 8px 20px rgba(0,0,0,0.1);"></div>
                     </div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="codigo" style="display: flex; align-items: center; gap: 8px; color: #374151; font-weight: 600; margin-bottom: 8px;">
-                        <i class="fas fa-barcode" style="color: #2962FF;"></i> Código: *
+                <div>
+                    <label style="display: flex; align-items: center; gap: 6px; color: var(--gray-700); font-weight: 600; margin-bottom: 6px; font-size: 0.8125rem;">
+                        <i class="fas fa-barcode" style="color: var(--primary); font-size: 0.75rem;"></i> Codigo <span style="color: var(--danger);">*</span>
                     </label>
                     <input type="text" id="codigo" name="codigo" required readonly
-                           placeholder="Se generará automáticamente" 
-                           style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #f3f4f6; color: #1f2937; cursor: not-allowed;">
-                    <small style="color: #6b7280; display: block; margin-top: 5px;">
-                        <i class="fas fa-info-circle"></i> El código se auto-completa al seleccionar un producto existente
+                           placeholder="Se genera automaticamente" 
+                           class="form-input" style="background: var(--gray-50); cursor: not-allowed;">
+                    <small style="color: var(--text-muted); display: block; margin-top: 4px; font-size: 0.6875rem;">
+                        <i class="fas fa-info-circle"></i> Se genera automaticamente
                     </small>
                 </div>
                 
-                <div class="form-group">
-                    <label for="sub_almacen_id" style="display: flex; align-items: center; gap: 8px; color: #374151; font-weight: 600; margin-bottom: 8px;">
-                        <i class="fas fa-warehouse" style="color: #2962FF;"></i> Sub-Almacén: *
+                <div>
+                    <label style="display: flex; align-items: center; gap: 6px; color: var(--gray-700); font-weight: 600; margin-bottom: 6px; font-size: 0.8125rem;">
+                        <i class="fas fa-ruler" style="color: var(--primary); font-size: 0.75rem;"></i> Unidad <span style="color: var(--danger);">*</span>
                     </label>
-                    <?php if ($usuarioData['rol'] === 'compras'): ?>
-                        <!-- Compras: mostrar Almacén General -->
-                        <input type="text" value="Almacén General" readonly 
-                               style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #f3f4f6; color: #1f2937; cursor: not-allowed;">
-                        <input type="hidden" name="sub_almacen_id" value="100">
-                        <small style="color: #6b7280; display: block; margin-top: 5px;">
-                            <i class="fas fa-info-circle"></i> Los productos se agregarán al Almacén General
-                        </small>
-                    <?php elseif ($puede_seleccionar): ?>
-                        <!-- Admin/Gerencia: select para elegir sub-almacén -->
-                        <select id="sub_almacen_id" name="sub_almacen_id" required 
-                                style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; color: #1f2937;">
-                            <option value="">Seleccionar...</option>
-                            <?php foreach ($sub_almacenes as $almacen): ?>
-                                <option value="<?php echo $almacen['id']; ?>">
-                                    <?php echo htmlspecialchars($almacen['nombre']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <small style="color: #6b7280; display: block; margin-top: 5px;">
-                            <i class="fas fa-info-circle"></i> Selecciona el sub-almacén donde se agregará el producto
-                        </small>
-                    <?php else: ?>
-                        <!-- Usuario departamental: mostrar su sub-almacén asignado -->
-                        <?php 
-                        $texto_almacen = !empty($usuarioData['sub_almacen_nombre']) 
-                            ? $usuarioData['sub_almacen_nombre'] 
-                            : (!empty($usuarioData['sub_almacen_id']) 
-                                ? 'Sub-almacén ID: ' . $usuarioData['sub_almacen_id'] 
-                                : 'No asignado');
-                        ?>
-                        <input type="text" value="<?php echo htmlspecialchars($texto_almacen); ?>" readonly 
-                               style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #f3f4f6; color: #1f2937; cursor: not-allowed;">
-                        <input type="hidden" name="sub_almacen_id" value="<?php echo $usuarioData['sub_almacen_id'] ?? ''; ?>">
-                        <small style="color: #6b7280; display: block; margin-top: 5px;">
-                            <i class="fas fa-info-circle"></i> Los productos se agregarán a tu sub-almacén asignado
-                        </small>
-                    <?php endif; ?>
+                    <?php
+                    $conn_u = getConnection();
+                    $unidades_agregar = [];
+                    $q_u = $conn_u->query("SELECT nombre FROM unidades WHERE activo = 1 ORDER BY nombre");
+                    if ($q_u) { while ($r_u = $q_u->fetch_assoc()) { $unidades_agregar[] = $r_u['nombre']; } }
+                    if (empty($unidades_agregar)) { $unidades_agregar = ['pieza', 'unidad', 'caja', 'paquete', 'bolsa', 'rollo', 'metro', 'litro', 'kilogramo', 'gramo', 'juego', 'par', 'docena', 'cubeta', 'bote', 'botella', 'servicio']; }
+                    ?>
+                    <select id="unidad" name="unidad" required class="form-input">
+                        <option value="">Seleccionar...</option>
+                        <?php foreach ($unidades_agregar as $u_item): ?>
+                            <option value="<?php echo htmlspecialchars($u_item); ?>"><?php echo ucfirst(htmlspecialchars($u_item)); ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
                 
-                <div class="form-group">
-                    <label for="cantidad" style="display: flex; align-items: center; gap: 8px; color: #374151; font-weight: 600; margin-bottom: 8px;">
-                        <i class="fas fa-hashtag" style="color: #2962FF;"></i> Cantidad Inicial: *
+                <div>
+                    <label style="display: flex; align-items: center; gap: 6px; color: var(--gray-700); font-weight: 600; margin-bottom: 6px; font-size: 0.8125rem;">
+                        <i class="fas fa-dollar-sign" style="color: var(--primary); font-size: 0.75rem;"></i> Precio Unitario
                     </label>
-                    <input type="number" id="cantidad" name="cantidad" min="0" required style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; color: #1f2937;">
-                </div>
-                
-                <div class="form-group">
-                    <label for="unidad" style="display: flex; align-items: center; gap: 8px; color: #374151; font-weight: 600; margin-bottom: 8px;">
-                        <i class="fas fa-ruler" style="color: #2962FF;"></i> Unidad: *
-                    </label>
-                    <input type="text" id="unidad" name="unidad" required 
-                           placeholder="Ej: pieza, litro, caja" style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; color: #1f2937;">
+                    <input type="number" id="precio_unitario" name="precio_unitario" step="0.01" min="0" placeholder="0.00" class="form-input">
                 </div>
             </div>
             
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px;">
-                <div class="form-group">
-                    <label for="precio_unitario" style="display: flex; align-items: center; gap: 8px; color: #374151; font-weight: 600; margin-bottom: 8px;">
-                        <i class="fas fa-dollar-sign" style="color: #2962FF;"></i> Precio Unitario:
-                    </label>
-                    <input type="number" id="precio_unitario" name="precio_unitario" 
-                           step="0.01" min="0" placeholder="0.00" style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; color: #1f2937;">
-                </div>
-                
-                <div class="form-group">
-                    <label for="stock_minimo" style="display: flex; align-items: center; gap: 8px; color: #374151; font-weight: 600; margin-bottom: 8px;">
-                        <i class="fas fa-exclamation-triangle" style="color: #2962FF;"></i> Stock Mínimo:
-                    </label>
-                    <input type="number" id="stock_minimo" name="stock_minimo" 
-                           min="0" value="10" style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; color: #1f2937;">
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="descripcion" style="display: flex; align-items: center; gap: 8px; color: #374151; font-weight: 600; margin-bottom: 8px;">
-                    <i class="fas fa-align-left" style="color: #2962FF;"></i> Descripción:
-                </label>
-                <textarea id="descripcion" name="descripcion" rows="3" 
-                          placeholder="Descripción del producto..." style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; resize: vertical; background: white; color: #1f2937;"></textarea>
-            </div>
-            
-            <div style="text-align: right; margin-top: 30px;">
-                <button type="submit" class="btn btn-primary" style="background: #2962FF; color: white; border: none; padding: 12px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 8px rgba(41, 98, 255, 0.3);">
+            <div style="display: flex; justify-content: flex-end; gap: 8px; padding-top: 1rem; border-top: 1px solid var(--gray-100);">
+                <a href="index.php" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
                     <i class="fas fa-save"></i> Agregar Producto
                 </button>
             </div>
@@ -150,19 +96,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const nombreInput = document.getElementById('nombre');
     const codigoInput = document.getElementById('codigo');
     const autocompleteDiv = document.getElementById('nombre-autocomplete');
-    const descripcionInput = document.getElementById('descripcion');
     const unidadInput = document.getElementById('unidad');
     const precioInput = document.getElementById('precio_unitario');
-    const stockMinimoInput = document.getElementById('stock_minimo');
+    
+    function generarCodigoAutomatico() {
+        var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        var result = 'ALM-100-';
+        for (var i = 0; i < 6; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    }
     
     let timeoutId = null;
     let productoSeleccionado = null;
     
     nombreInput.addEventListener('input', function() {
-        if (timeoutId) {
-            clearTimeout(timeoutId);
-        }
-        
+        if (timeoutId) clearTimeout(timeoutId);
         const nombre = this.value.trim();
         
         if (nombre.length === 0) {
@@ -171,159 +121,135 @@ document.addEventListener('DOMContentLoaded', function() {
             productoSeleccionado = null;
             codigoInput.value = '';
             codigoInput.readOnly = true;
-            codigoInput.style.background = '#f3f4f6';
-            codigoInput.placeholder = 'Se generará automáticamente';
-            nombreInput.style.borderColor = '#d1d5db';
-            nombreInput.style.borderWidth = '1px';
+            codigoInput.style.background = 'var(--gray-50)';
+            nombreInput.style.borderColor = 'var(--gray-200)';
             return;
         }
+        if (nombre.length < 2) { autocompleteDiv.style.display = 'none'; return; }
         
-        if (nombre.length < 2) {
-            autocompleteDiv.style.display = 'none';
-            autocompleteDiv.innerHTML = '';
-            return;
-        }
-        
-        autocompleteDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: #6b7280;"><i class="fas fa-spinner fa-spin"></i> Buscando...</div>';
+        autocompleteDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Buscando...</div>';
         autocompleteDiv.style.display = 'block';
         
         timeoutId = setTimeout(() => {
             fetch(`api/buscar-producto-nombre.php?nombre=${encodeURIComponent(nombre)}`)
-                .then(response => response.json())
+                .then(r => r.json())
                 .then(data => {
-                    if (data.success && data.productos.length > 0) {
-                        mostrarAutocomplete(data.productos);
-                    } else {
-                        mostrarCrearNuevo();
-                    }
+                    if (data.success && data.productos.length > 0) mostrarAutocomplete(data.productos);
+                    else mostrarCrearNuevo();
                 })
-                .catch(error => {
-                    console.error('[v0] Error al buscar productos:', error);
-                    autocompleteDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Error al buscar</div>';
+                .catch(() => {
+                    autocompleteDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--danger);"><i class="fas fa-exclamation-triangle"></i> Error al buscar</div>';
                 });
         }, 300);
     });
     
     function mostrarAutocomplete(productos) {
         autocompleteDiv.innerHTML = '';
-        
-        productos.forEach(producto => {
+        productos.forEach(p => {
             const item = document.createElement('div');
-            item.style.cssText = 'padding: 12px; cursor: pointer; border-bottom: 1px solid #e5e7eb; transition: background 0.2s;';
-            item.innerHTML = `
-                <div style="font-weight: 600; color: #1f2937; margin-bottom: 4px;">${producto.nombre}</div>
-                <div style="font-size: 12px; color: #6b7280;">
-                    <span style="background: rgba(41, 98, 255, 0.1); color: #2962FF; padding: 2px 8px; border-radius: 4px; margin-right: 8px;">${producto.codigo}</span>
-                    <span>Stock total: ${producto.cantidad_total} ${producto.unidad}</span>
-                    ${producto.almacenes_count > 1 ? ` <span style="color: #f59e0b;">• ${producto.almacenes_count} almacenes</span>` : ''}
-                </div>
-            `;
-            
-            item.addEventListener('mouseenter', function() {
-                this.style.background = 'rgba(41, 98, 255, 0.05)';
-            });
-            
-            item.addEventListener('mouseleave', function() {
-                this.style.background = 'white';
-            });
-            
-            item.addEventListener('click', function() {
-                seleccionarProducto(producto);
-            });
-            
+            item.style.cssText = 'padding: 10px 14px; cursor: pointer; border-bottom: 1px solid var(--gray-100); transition: background 0.15s;';
+            item.innerHTML = `<div style="font-weight: 600; color: var(--gray-900); font-size: 0.8125rem;">${p.nombre} <span style="background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 4px; font-size: 0.6875rem; font-weight: 700; margin-left: 4px;">${p.unidad || 'sin unidad'}</span></div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">
+                    <span style="background: var(--primary-light); color: var(--primary); padding: 2px 6px; border-radius: 4px; margin-right: 6px; font-weight: 600;">${p.codigo}</span>
+                    Stock: ${p.cantidad_total} ${p.unidad} ${p.almacenes_count > 1 ? `<span style="color: var(--warning);">| ${p.almacenes_count} almacenes</span>` : ''}
+                </div>`;
+            item.addEventListener('mouseenter', () => item.style.background = 'var(--gray-50)');
+            item.addEventListener('mouseleave', () => item.style.background = 'white');
+            item.addEventListener('click', () => seleccionarProducto(p));
             autocompleteDiv.appendChild(item);
         });
-        
         const nuevoItem = document.createElement('div');
-        nuevoItem.style.cssText = 'padding: 12px; cursor: pointer; background: rgba(41, 98, 255, 0.05); color: #2962FF; font-weight: 600; border-top: 2px solid #e5e7eb;';
+        nuevoItem.style.cssText = 'padding: 10px 14px; cursor: pointer; background: var(--primary-light); color: var(--primary); font-weight: 600; font-size: 0.8125rem; border-top: 2px solid var(--gray-100);';
         nuevoItem.innerHTML = '<i class="fas fa-plus-circle"></i> Crear nuevo producto con este nombre';
-        nuevoItem.addEventListener('mouseenter', function() {
-            this.style.background = 'rgba(41, 98, 255, 0.1)';
-        });
-        nuevoItem.addEventListener('mouseleave', function() {
-            this.style.background = 'rgba(41, 98, 255, 0.05)';
-        });
-        nuevoItem.addEventListener('click', function() {
-            crearNuevoProducto();
-        });
+        nuevoItem.addEventListener('click', crearNuevoProducto);
         autocompleteDiv.appendChild(nuevoItem);
-        
         autocompleteDiv.style.display = 'block';
     }
     
     function mostrarCrearNuevo() {
-        autocompleteDiv.innerHTML = '';
-        
-        const infoItem = document.createElement('div');
-        infoItem.style.cssText = 'padding: 12px; color: #6b7280; text-align: center;';
-        infoItem.innerHTML = '<i class="fas fa-info-circle"></i> No se encontraron productos con ese nombre';
-        autocompleteDiv.appendChild(infoItem);
-        
+        autocompleteDiv.innerHTML = '<div style="padding: 10px 14px; color: var(--text-muted); text-align: center; font-size: 0.8125rem;"><i class="fas fa-info-circle"></i> No se encontraron productos</div>';
         const nuevoItem = document.createElement('div');
-        nuevoItem.style.cssText = 'padding: 12px; cursor: pointer; background: rgba(41, 98, 255, 0.05); color: #2962FF; font-weight: 600; text-align: center;';
+        nuevoItem.style.cssText = 'padding: 10px 14px; cursor: pointer; background: var(--primary-light); color: var(--primary); font-weight: 600; text-align: center; font-size: 0.8125rem;';
         nuevoItem.innerHTML = '<i class="fas fa-plus-circle"></i> Crear nuevo producto';
-        nuevoItem.addEventListener('click', function() {
-            crearNuevoProducto();
-        });
+        nuevoItem.addEventListener('click', crearNuevoProducto);
         autocompleteDiv.appendChild(nuevoItem);
-        
         autocompleteDiv.style.display = 'block';
     }
     
-    function seleccionarProducto(producto) {
-        productoSeleccionado = producto;
-        nombreInput.value = producto.nombre;
-        codigoInput.value = producto.codigo;
+    function seleccionarProducto(p) {
+        productoSeleccionado = p;
+        nombreInput.value = p.nombre;
+        codigoInput.value = p.codigo;
         codigoInput.readOnly = true;
-        codigoInput.style.background = '#f3f4f6';
-        codigoInput.style.cursor = 'not-allowed';
-        descripcionInput.value = producto.descripcion || '';
-        unidadInput.value = producto.unidad;
-        precioInput.value = producto.precio_unitario || '';
-        stockMinimoInput.value = producto.stock_minimo || '10';
+        codigoInput.style.background = 'var(--gray-50)';
+        // Establecer unidad en el select
+        if (p.unidad) {
+            var unidadEncontrada = false;
+            for (var i = 0; i < unidadInput.options.length; i++) {
+                if (unidadInput.options[i].value.toLowerCase() === p.unidad.toLowerCase()) {
+                    unidadInput.selectedIndex = i;
+                    unidadEncontrada = true;
+                    break;
+                }
+            }
+        }
+        precioInput.value = p.precio_unitario || '';
         autocompleteDiv.style.display = 'none';
+        nombreInput.style.borderColor = 'var(--success)';
         
-        nombreInput.style.borderColor = '#10b981';
-        nombreInput.style.borderWidth = '2px';
-        
-        const tooltip = document.createElement('div');
-        tooltip.style.cssText = 'position: absolute; top: -40px; left: 0; background: #10b981; color: white; padding: 8px 12px; border-radius: 6px; font-size: 12px; white-space: nowrap; z-index: 1000;';
-        tooltip.innerHTML = '<i class="fas fa-check-circle"></i> Producto existente seleccionado. Se usará el mismo código.';
-        nombreInput.parentElement.style.position = 'relative';
-        nombreInput.parentElement.appendChild(tooltip);
-        
-        setTimeout(() => {
-            tooltip.remove();
-        }, 3000);
+        // Quitar aviso previo si habia
+        var avisoAnterior = document.getElementById('aviso-unidad-diferente');
+        if (avisoAnterior) avisoAnterior.remove();
     }
+    
+    // Detectar cambio de unidad tras seleccionar un producto existente
+    unidadInput.addEventListener('change', function() {
+        var avisoAnterior = document.getElementById('aviso-unidad-diferente');
+        if (avisoAnterior) avisoAnterior.remove();
+        
+        if (productoSeleccionado && productoSeleccionado.unidad) {
+            var unidadOriginal = productoSeleccionado.unidad.toLowerCase();
+            var unidadNueva = this.value.toLowerCase();
+            
+            if (unidadNueva && unidadNueva !== unidadOriginal) {
+                // Generar nuevo codigo porque sera un producto separado
+                codigoInput.value = generarCodigoAutomatico();
+                
+                var aviso = document.createElement('div');
+                aviso.id = 'aviso-unidad-diferente';
+                aviso.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 0.625rem 1rem; border-radius: 8px; margin-bottom: 1rem; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; font-size: 0.75rem; font-weight: 500;';
+                aviso.innerHTML = '<i class="fas fa-info-circle"></i> Se creara un nuevo registro: <strong>"' + productoSeleccionado.nombre + ' (' + this.value + ')"</strong> separado de <strong>"' + productoSeleccionado.nombre + ' (' + productoSeleccionado.unidad + ')"</strong>';
+                document.querySelector('.card form').insertBefore(aviso, document.querySelector('.card form').firstChild);
+            } else if (unidadNueva === unidadOriginal) {
+                // Restaurar codigo original
+                codigoInput.value = productoSeleccionado.codigo;
+            }
+        }
+    });
     
     function crearNuevoProducto() {
         productoSeleccionado = null;
         autocompleteDiv.style.display = 'none';
-        codigoInput.value = '';
+        codigoInput.value = generarCodigoAutomatico();
         codigoInput.readOnly = true;
-        codigoInput.style.background = '#f3f4f6';
-        codigoInput.placeholder = 'Se generará automáticamente';
-        nombreInput.style.borderColor = '#2962FF';
-        nombreInput.style.borderWidth = '2px';
-        
-        descripcionInput.value = '';
-        unidadInput.value = '';
+        codigoInput.style.background = 'var(--gray-50)';
+        nombreInput.style.borderColor = 'var(--primary)';
+        unidadInput.selectedIndex = 0;
         precioInput.value = '';
-        stockMinimoInput.value = '10';
     }
     
     document.addEventListener('click', function(e) {
-        if (!nombreInput.contains(e.target) && !autocompleteDiv.contains(e.target)) {
-            autocompleteDiv.style.display = 'none';
-        }
+        if (!nombreInput.contains(e.target) && !autocompleteDiv.contains(e.target)) autocompleteDiv.style.display = 'none';
     });
     
     document.querySelector('form').addEventListener('submit', function(e) {
-        if (productoSeleccionado && !codigoInput.value) {
+        // Si no hay codigo pero si hay nombre, generar codigo automaticamente
+        if (!codigoInput.value && nombreInput.value.trim() !== '') {
+            codigoInput.value = generarCodigoAutomatico();
+        }
+        if (!codigoInput.value) {
             e.preventDefault();
-            alert('Error: El código del producto no se ha cargado correctamente. Por favor, selecciona el producto nuevamente.');
-            return false;
+            alert('Error: Escribe un nombre de producto.');
         }
     });
 });

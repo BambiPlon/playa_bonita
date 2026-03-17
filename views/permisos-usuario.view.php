@@ -1,77 +1,59 @@
 <main class="main-content">
-    <!-- Header con gradiente azul marino -->
-    <div style="background: linear-gradient(135deg, #0a192f 0%, #1d3557 50%, #2962FF 100%); padding: 2.5rem; border-radius: 16px; margin-bottom: 2rem; color: white; box-shadow: 0 10px 40px rgba(41, 98, 255, 0.15);">
-        <div style="display: flex; align-items: center; gap: 1.5rem;">
-            <div style="background: rgba(255,255,255,0.15); padding: 1.25rem; border-radius: 16px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2);">
-                <i class="fas fa-key" style="font-size: 2rem;"></i>
-            </div>
-            <div>
-                <h1 style="margin: 0; font-size: 2rem; font-weight: 700;">Permisos de Usuario</h1>
-                <p style="margin: 0.5rem 0 0 0; opacity: 0.9;">Configurar permisos para <?php echo htmlspecialchars($usuario['nombre_completo']); ?> (<?php echo htmlspecialchars($usuario['username']); ?>)</p>
-            </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div>
+            <h1 style="margin: 0 0 4px 0; font-size: 1.5rem; font-weight: 700; color: var(--gray-900);">Permisos de Usuario</h1>
+            <p style="margin: 0; color: var(--text-muted); font-size: 0.8125rem;">Configurar permisos para <?php echo htmlspecialchars($usuario['nombre_completo']); ?> (<?php echo htmlspecialchars($usuario['username']); ?>)</p>
         </div>
+        <a href="usuarios.php" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
     </div>
 
     <?php if ($usuario['rol'] === 'admin'): ?>
-    <!-- Alerta con diseño minimalista -->
-    <div style="background: linear-gradient(135deg, rgba(41, 98, 255, 0.05) 0%, rgba(41, 98, 255, 0.1) 100%); border-left: 4px solid #2962FF; padding: 1.25rem; border-radius: 12px; margin-bottom: 1.5rem; border: 1px solid rgba(41, 98, 255, 0.2);">
-        <i class="fas fa-info-circle" style="color: #2962FF;"></i>
-        Los administradores tienen acceso completo a todos los módulos del sistema.
+    <div style="display: flex; align-items: center; gap: 10px; padding: 1rem 1.25rem; border-radius: 12px; margin-bottom: 1rem; background: var(--primary-light); border: 1px solid #bfdbfe; color: var(--primary-hover);">
+        <i class="fas fa-info-circle" style="font-size: 1rem;"></i>
+        <span style="font-weight: 500; font-size: 0.8125rem;">Los administradores tienen acceso completo a todos los modulos del sistema.</span>
     </div>
     <?php else: ?>
     
     <?php if (isset($error)): ?>
-    <div style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-left: 4px solid #ef4444; padding: 1.25rem; border-radius: 12px; margin-bottom: 1.5rem;">
-        <?php echo htmlspecialchars($error); ?>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 1rem 1.25rem; border-radius: 12px; margin-bottom: 1rem; background: var(--danger-light); border: 1px solid #fecaca; color: #991b1b;">
+        <i class="fas fa-exclamation-circle"></i>
+        <span style="font-weight: 500; font-size: 0.8125rem;"><?php echo htmlspecialchars($error); ?></span>
     </div>
     <?php endif; ?>
 
-    <!-- Card con diseño limpio -->
-    <div style="background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 4px 20px rgba(10, 25, 47, 0.08); border: 1px solid rgba(41, 98, 255, 0.08);">
+    <div class="card">
         <form method="POST">
-            <h3 style="margin-bottom: 1.5rem; color: #0a192f; font-size: 1.5rem;">Módulos del Sistema</h3>
-            <p style="margin-bottom: 2rem; color: #6b7280;">
-                Selecciona los módulos a los que este usuario tendrá acceso en el menú lateral.
-            </p>
+            <h3 style="margin: 0 0 4px 0; font-size: 1rem; font-weight: 700; color: var(--gray-900);">Modulos del Sistema</h3>
+            <p style="margin: 0 0 1.5rem 0; color: var(--text-muted); font-size: 0.8125rem;">Selecciona los modulos a los que este usuario tendra acceso en el menu lateral.</p>
 
             <?php if (isset($modulos_disponibles['agregar_producto'])): ?>
-            <div style="background: linear-gradient(135deg, rgba(41, 98, 255, 0.05) 0%, rgba(41, 98, 255, 0.1) 100%); padding: 1rem; border-radius: 12px; margin-bottom: 1.5rem; border: 1px solid rgba(41, 98, 255, 0.2);">
-                <i class="fas fa-info-circle" style="color: #2962FF;"></i>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 0.75rem 1rem; border-radius: 10px; margin-bottom: 1.25rem; background: var(--primary-light); border: 1px solid #bfdbfe; color: var(--primary-hover); font-size: 0.8125rem;">
+                <i class="fas fa-info-circle"></i>
                 <?php if ($usuario['rol'] === 'compras'): ?>
-                    Este usuario puede agregar productos al <strong>Almacén General</strong>.
+                    Este usuario puede agregar productos al <strong>Almacen General</strong>.
                 <?php else: ?>
-                    Este usuario puede agregar productos solo a su <strong>Sub-Almacén: <?php echo htmlspecialchars($usuario['sub_almacen_nombre']); ?></strong>.
+                    Este usuario puede agregar productos solo a su <strong>Sub-Almacen: <?php echo htmlspecialchars($usuario['sub_almacen_nombre']); ?></strong>.
                 <?php endif; ?>
             </div>
             <?php endif; ?>
 
-            <!-- Grid de permisos con diseño minimalista -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem;">
                 <?php foreach($modulos_disponibles as $modulo => $info): ?>
-                <div>
-                    <label style="display: flex; align-items: center; padding: 1.25rem; background: #f9fafb; border-radius: 12px; cursor: pointer; transition: all 0.3s; border: 2px solid #e5e7eb;"
-                           onmouseover="this.style.background='rgba(41, 98, 255, 0.05)'; this.style.borderColor='#2962FF'; this.style.transform='translateX(5px)'"
-                           onmouseout="this.style.background='#f9fafb'; this.style.borderColor='#e5e7eb'; this.style.transform='translateX(0)'">
-                        <input type="checkbox" 
-                               name="modulos[]" 
-                               value="<?php echo $modulo; ?>"
-                               <?php echo in_array($modulo, $permisos_actuales) ? 'checked' : ''; ?>
-                               style="width: 20px; height: 20px; margin-right: 1rem; cursor: pointer; accent-color: #2962FF;">
-                        <i class="fas <?php echo $info['icono']; ?>" style="margin-right: 0.75rem; color: #2962FF; font-size: 1.125rem;"></i>
-                        <span style="font-weight: 600; color: #0a192f;"><?php echo $info['nombre']; ?></span>
-                    </label>
-                </div>
+                <label style="display: flex; align-items: center; padding: 1rem; background: var(--gray-50); border-radius: 10px; cursor: pointer; transition: all 0.15s; border: 1px solid var(--gray-200);"
+                       onmouseover="this.style.background='var(--primary-light)'; this.style.borderColor='var(--primary)'"
+                       onmouseout="this.style.background='var(--gray-50)'; this.style.borderColor='var(--gray-200)'">
+                    <input type="checkbox" name="modulos[]" value="<?php echo $modulo; ?>" <?php echo in_array($modulo, $permisos_actuales) ? 'checked' : ''; ?> style="width: 18px; height: 18px; margin-right: 0.75rem; cursor: pointer; accent-color: var(--primary);">
+                    <i class="fas <?php echo $info['icono']; ?>" style="margin-right: 0.5rem; color: var(--primary); font-size: 0.875rem;"></i>
+                    <span style="font-weight: 600; color: var(--gray-900); font-size: 0.8125rem;"><?php echo $info['nombre']; ?></span>
+                </label>
                 <?php endforeach; ?>
             </div>
 
-            <!-- Botones con gradiente azul marino -->
-            <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 2rem; border-top: 2px solid #f3f4f6;">
-                <button type="submit" style="background: linear-gradient(135deg, #2962FF 0%, #1d3557 100%); color: white; border: none; padding: 1rem 2.5rem; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 16px rgba(41, 98, 255, 0.3); font-size: 1rem;">
-                    <i class="fas fa-save"></i> Guardar Permisos
-                </button>
-                <button type="button" onclick="window.location.href='usuarios.php'" style="background: #f3f4f6; color: #374151; border: 2px solid #e5e7eb; padding: 1rem 2.5rem; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s; font-size: 1rem;">
-                    <i class="fas fa-times"></i> Cancelar
-                </button>
+            <div style="display: flex; gap: 8px; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid var(--gray-100);">
+                <a href="usuarios.php" class="btn btn-secondary"><i class="fas fa-times"></i> Cancelar</a>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar Permisos</button>
             </div>
         </form>
     </div>

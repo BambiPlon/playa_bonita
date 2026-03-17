@@ -3,164 +3,268 @@ error_reporting(0);
 ini_set('display_errors', '0');
 ob_start();
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+session_start();
+require_once 'config/database.php';
+require_once 'controllers/SalidaController.php';
+require_once 'lib/fpdf/fpdf.php';
 
-require_once __DIR__ . '/config/database.php';
-require_once __DIR__ . '/controllers/SalidaController.php';
-require_once __DIR__ . '/lib/fpdf/fpdf.php';
-
-// ================= Helpers =================
-function pdf_text($s): string {
-    return iconv('UTF-8', 'ISO-8859-1//TRANSLIT', (string)$s);
-}
-
-// ================= Auth =================
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
 }
 
-$user = [
-    'id' => $_SESSION['user_id'] ?? null,
-    'username' => $_SESSION['user_username'] ?? '',
-    'nombre' => $_SESSION['user_nombre'] ?? '',
-    'rol' => $_SESSION['user_rol'] ?? '',
-    'sub_almacen_id' => $_SESSION['user_sub_almacen_id'] ?? null
-];
-
-$salida_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$salida_id = $_GET['id'] ?? 0;
 
 $db = getConnection();
 $salidaController = new SalidaController($db);
-
 $salida = $salidaController->obtenerSalidaPorId($salida_id);
 
 if (!$salida) {
-    while (ob_get_level()) ob_end_clean();
+    ob_end_clean();
     die('Salida no encontrada');
 }
+ob_end_clean();
 
-// Limpia cualquier output antes del PDF
-while (ob_get_level()) ob_end_clean();
+function pdfText($str) {
+    return iconv('UTF-8', 'ISO-8859-1//TRANSLIT', (string)$str);
+}
 
-// ================= PDF =================
-class PDF_Salida extends FPDF
+class PDF extends FPDF
 {
-    public function Header()
-    {
-        // Colores del login (azul)
-        $primary = [41, 98, 255];
+    public $orgNombre = 'Hotel Playa Bonita';
+    public $orgLinea1 = 'Av. Paseo Balboa No. 100, Puerto Penasco, Sonora';
+    public $orgLinea2 = 'CP: 83550 | Contacto: Departamento de Compras';
+    public $mutedColor = [80,80,80];
 
-        // Logo en esquina
-        $logo = __DIR__ . '/assets/img/logo.png';
-        if (file_exists($logo)) {
-            $this->Image($logo, 10, 10, 38); // x, y, ancho
+    function Header()
+    {
+        $this->SetMargins(12, 12, 12);
+
+        // Encabezado centrado
+        $this->SetXY(12, 12);
+        $this->SetFont('Arial', 'B', 12);
+        $this->Cell(0, 6, pdfText($this->orgNombre), 0, 1, 'C');
+
+        $this->SetFont('Arial', '', 9);
+        $this->SetTextColor($this->mutedColor[0], $this->mutedColor[1], $this->mutedColor[2]);
+        $this->Cell(0, 5, pdfText($this->orgLinea1), 0, 1, 'C');
+        $this->Cell(0, 5, pdfText($this->orgLinea2), 0, 1, 'C');
+        $this->SetTextColor(0,0,0);
+
+        // Título en caja (si la quieres sin caja, quita Rect)
+        $badgeW = 64; $badgeH = 8;
+        $badgeX = 210 - 12 - $badgeW; // Letter
+        $badgeY = 13;
+        $this->Rect($badgeX, $badgeY, $badgeW, $badgeH);
+        $this->SetXY($badgeX, $badgeY + 1.3);
+        $this->SetFont('Arial', 'B', 10);
+        $this->Cell($badgeW, 5, pdfText('SALIDA DE ALMACÉN'), 0, 0, 'C');
+
+        // Separador
+        $this->Ln(10);
+        $this->Line(12, 36, 204, 36);
+        $this->Ln(6);
+    }
+
+    function muted($on = true)
+    {
+        if ($on) $this->SetTextColor($this->mutedColor[0], $this->mutedColor[1], $this->mutedColor[2]);
+        else $this->SetTextColor(0,0,0);
+    }
+
+    function labelValue($x, $y, $label, $value, $labelW = 22)
+    {
+        $this->SetXY($x, $y);
+        $this->SetFont('Arial', 'B', 9);
+        $this->Cell($labelW, 5, pdfText($label), 0, 0, 'L');
+        $this->SetFont('Arial', '', 9);
+        $this->Cell(0, 5, pdfText($value), 0, 1, 'L');
+    }
+
+    function sectionTitle($x, $y, $title)
+    {
+        $this->SetXY($x, $y);
+        $this->SetFont('Arial', 'B', 9);
+        $this->Cell(0, 5, pdfText($title), 0, 1, 'L');
+    }
+
+    function tableHeader($x, $y, $cols)
+    {
+        $this->SetXY($x, $y);
+        $this->SetFont('Arial', 'B', 9);
+        foreach ($cols as $c) {
+            $this->Cell($c['w'], 7, pdfText($c['t']), 1, 0, 'C');
+        }
+        $this->Ln();
+    }
+
+    // Cuenta líneas como MultiCell
+    function NbLines($w, $txt)
+    {
+        $cw = &$this->CurrentFont['cw'];
+        if ($w==0) $w = $this->w - $this->rMargin - $this->x;
+        $wmax = ($w - 2*$this->cMargin) * 1000 / $this->FontSize;
+        $s = str_replace("\r",'',$txt);
+        $nb = strlen($s);
+        if ($nb>0 && $s[$nb-1]=="\n") $nb--;
+        $sep = -1;
+        $i = 0;
+        $j = 0;
+        $l = 0;
+        $nl = 1;
+        while ($i<$nb) {
+            $c = $s[$i];
+            if ($c=="\n") {
+                $i++; $sep=-1; $j=$i; $l=0; $nl++;
+                continue;
+            }
+            if ($c==' ') $sep = $i;
+            $l += $cw[$c] ?? 0;
+            if ($l>$wmax) {
+                if ($sep==-1) {
+                    if ($i==$j) $i++;
+                } else {
+                    $i = $sep+1;
+                }
+                $sep=-1; $j=$i; $l=0; $nl++;
+            } else {
+                $i++;
+            }
+        }
+        return $nl;
+    }
+
+    /**
+     * FILA DE TABLA CORRECTA (SIN LÍNEAS RARAS)
+     * Clave: NO usar GetX() después de MultiCell.
+     * Guardamos $xCell antes de imprimir cada celda.
+     */
+    function Row($cols, $data, $x, $minH = 10)
+    {
+        // altura máxima por wrap
+        $maxLines = 1;
+        for ($i=0; $i<count($cols); $i++) {
+            $txt = pdfText($data[$i] ?? '');
+            $lines = $this->NbLines($cols[$i]['w'], $txt);
+            if ($lines > $maxLines) $maxLines = $lines;
+        }
+        $h = max($minH, 5 * $maxLines);
+
+        $y = $this->GetY();
+        $this->SetXY($x, $y);
+
+        for ($i=0; $i<count($cols); $i++) {
+            $w = $cols[$i]['w'];
+            $align = $cols[$i]['a'] ?? 'L';
+            $txt = pdfText($data[$i] ?? '');
+
+            // Guardar X real de esta celda
+            $xCell = $this->GetX();
+
+            // Borde de celda
+            $this->Rect($xCell, $y, $w, $h);
+
+            // Texto dentro (con padding vertical)
+            $this->SetXY($xCell, $y + 2);
+            $this->MultiCell($w, 5, $txt, 0, $align);
+
+            // Volver al tope de la fila y avanzar a la siguiente celda
+            $this->SetXY($xCell + $w, $y);
         }
 
-        // Título a la derecha
-        $this->SetXY(55, 12);
-        $this->SetFont('Arial', 'B', 16);
-        $this->SetTextColor($primary[0], $primary[1], $primary[2]);
-        $this->Cell(0, 10, pdf_text('SALIDA DE ALMACÉN'), 0, 1, 'R');
-
-        // Línea separadora
-        $this->Ln(6);
-        $this->SetDrawColor(220, 225, 235);
-        $this->Line(10, 32, 205, 32);
-
-        $this->Ln(8);
-        $this->SetTextColor(0, 0, 0);
-    }
-
-    public function Footer()
-    {
-        $this->SetY(-15);
-        $this->SetFont('Arial', 'I', 8);
-        $this->SetTextColor(120, 130, 140);
-        $this->Cell(0, 10, pdf_text('Página ') . $this->PageNo(), 0, 0, 'C');
-    }
-
-    // Chip de etiqueta
-    public function LabelValue($label, $value, $wLabel = 35)
-    {
-        $this->SetFont('Arial', 'B', 10);
-        $this->SetTextColor(60, 70, 80);
-        $this->Cell($wLabel, 7, pdf_text($label), 0, 0, 'L');
-
-        $this->SetFont('Arial', '', 10);
-        $this->SetTextColor(0, 0, 0);
-        $this->Cell(0, 7, pdf_text($value), 0, 1, 'L');
-    }
-
-    public function SectionTitle($title)
-    {
-        $primary = [41, 98, 255];
-        $graybg = [240, 243, 248];
-
-        $this->Ln(4);
-        $this->SetFillColor($graybg[0], $graybg[1], $graybg[2]);
-        $this->SetFont('Arial', 'B', 11);
-        $this->SetTextColor($primary[0], $primary[1], $primary[2]);
-        $this->Cell(0, 9, pdf_text($title), 0, 1, 'L', true);
-        $this->SetTextColor(0, 0, 0);
-        $this->Ln(2);
+        // Siguiente fila
+        $this->SetXY($x, $y + $h);
     }
 }
 
-$pdf = new PDF_Salida('P', 'mm', 'Letter');
-$pdf->SetMargins(10, 10, 10);
+$pdf = new PDF('P', 'mm', 'Letter');
 $pdf->SetAutoPageBreak(true, 18);
 $pdf->AddPage();
 
-// ======= Información General =======
-$pdf->SectionTitle('Información General');
+// ===== Datos =====
+$folio     = $salida['folio'] ?? ('SAL-' . (int)$salida_id);
+$fecha     = isset($salida['fecha_salida']) ? date('d/m/Y', strtotime($salida['fecha_salida'])) : date('d/m/Y');
 
-$pdf->LabelValue('Folio:', $salida['folio'] ?? '');
-$pdf->LabelValue('Fecha:', !empty($salida['fecha_salida']) ? date('d/m/Y', strtotime($salida['fecha_salida'])) : '');
-$pdf->LabelValue('Sub-Almacén:', $salida['sub_almacen_nombre'] ?? '');
-$pdf->LabelValue('Usuario:', $salida['usuario_nombre'] ?? '');
+$subalmacen = $salida['sub_almacen_nombre'] ?? '';
+$usuario    = $salida['usuario_nombre'] ?? '';
+$destino    = $salida['destino'] ?? '';
+$motivo     = trim((string)($salida['motivo'] ?? ''));
 
-// ======= Detalles del Producto =======
-$pdf->SectionTitle('Detalles del Producto');
+$codigo   = $salida['producto_codigo'] ?? '';
+$producto = $salida['producto_nombre'] ?? '';
+$cantidad = (string)($salida['cantidad'] ?? '');
+$unidad   = (string)($salida['unidad'] ?? '');
 
-$pdf->LabelValue('Código:', $salida['producto_codigo'] ?? '');
-$pdf->LabelValue('Producto:', $salida['producto_nombre'] ?? '');
-$pdf->LabelValue('Cantidad:', trim(($salida['cantidad'] ?? '') . ' ' . ($salida['unidad'] ?? '')));
-$pdf->LabelValue('Destino:', $salida['destino'] ?? '');
+// ===== Info derecha =====
+$pdf->labelValue(130, 40, 'No. Salida:', $folio, 22);
+$pdf->labelValue(130, 45, 'Fecha:', $fecha, 22);
 
-// ======= Motivo =======
-$pdf->SectionTitle('Motivo');
+// ===== Bloques sin contornos =====
+$leftX  = 14;
+$rightX = 112;
+$topY   = 58;
 
-$pdf->SetFont('Arial', '', 10);
-$pdf->SetTextColor(0, 0, 0);
+$pdf->sectionTitle($leftX, $topY, 'Datos del Producto:');
+$pdf->muted(true);
+$pdf->SetXY($leftX, $topY + 6);
+$pdf->SetFont('Arial', '', 9);
+$pdf->MultiCell(90, 5, pdfText(
+    "Código: {$codigo}\n" .
+    "Descripción: {$producto}\n" .
+    "Unidad: {$unidad}"
+), 0, 'L');
+$pdf->muted(false);
 
-// Cuadro tipo “card”
-$pdf->SetDrawColor(220, 225, 235);
-$pdf->SetFillColor(250, 251, 253);
-$x = $pdf->GetX();
-$y = $pdf->GetY();
+$pdf->sectionTitle($rightX, $topY, 'Entregar en:');
+$pdf->muted(true);
+$pdf->SetXY($rightX, $topY + 6);
+$pdf->SetFont('Arial', '', 9);
+$pdf->MultiCell(90, 5, pdfText(
+    "Sub-Almacén: {$subalmacen}\n" .
+    "Área/Destino: {$destino}\n" .
+    "Usuario: {$usuario}"
+), 0, 'L');
+$pdf->muted(false);
 
-$motivo = pdf_text($salida['motivo'] ?? '');
-$pdf->MultiCell(0, 6, $motivo, 1, 'L', true);
+// Separador
+$pdf->Line(12, 88, 204, 88);
 
-$pdf->Ln(6);
+// ===== Tabla (ya sin error) =====
+$cols = [
+    ['t'=>'CANT.',       'w'=>14, 'a'=>'C'],
+    ['t'=>'CÓDIGO',      'w'=>38, 'a'=>'L'],
+    ['t'=>'DESCRIPCIÓN', 'w'=>84, 'a'=>'L'],
+    ['t'=>'UNIDAD',      'w'=>22, 'a'=>'C'],
+    ['t'=>'DESTINO',     'w'=>34, 'a'=>'L'],
+];
 
-// ======= Firmas =======
-$pdf->SectionTitle('Firmas');
+$pdf->tableHeader(12, 94, $cols);
+$pdf->SetFont('Arial', '', 9);
 
-$pdf->Ln(12);
-$pdf->SetTextColor(0, 0, 0);
-$pdf->SetFont('Arial', '', 10);
+// fila con datos
+$pdf->Row($cols, [$cantidad, $codigo, $producto, $unidad, $destino], 12, 10);
 
+// filas vacías
+$emptyRows = 8;
+for ($i=0; $i<$emptyRows; $i++) {
+    $pdf->Row($cols, ['', '', '', '', ''], 12, 10);
+}
+
+// ===== Motivo =====
+$pdf->Ln(8);
+$pdf->SetFont('Arial', 'B', 9);
+$pdf->Cell(0, 5, pdfText('Motivo / Observaciones:'), 0, 1, 'L');
+$pdf->SetFont('Arial', '', 9);
+$pdf->muted(true);
+$pdf->MultiCell(0, 5, pdfText($motivo), 0, 'L');
+$pdf->muted(false);
+
+// ===== Firmas (solo entrega/recibe) =====
+$pdf->Ln(18);
+$pdf->SetFont('Arial', '', 9);
 $pdf->Cell(95, 5, '_______________________________', 0, 0, 'C');
 $pdf->Cell(95, 5, '_______________________________', 0, 1, 'C');
-$pdf->SetTextColor(100, 110, 120);
-$pdf->Cell(95, 5, pdf_text('Entrega'), 0, 0, 'C');
-$pdf->Cell(95, 5, pdf_text('Recibe'), 0, 1, 'C');
+$pdf->Cell(95, 5, pdfText('Entrega'), 0, 0, 'C');
+$pdf->Cell(95, 5, pdfText('Recibe'), 0, 1, 'C');
 
-// Output
-$folioSafe = preg_replace('/[^A-Za-z0-9_\-]/', '_', (string)($salida['folio'] ?? ''));
-$pdf->Output('I', 'Salida_' . $folioSafe . '.pdf');
-exit;
+$pdf->Output('I', 'Salida_' . preg_replace('/[^A-Za-z0-9_\-]/', '', (string)$folio) . '.pdf');

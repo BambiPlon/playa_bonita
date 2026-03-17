@@ -12,75 +12,97 @@ class RequisicionController {
         $this->notificacionModel = new Notificacion();
     }
     
-    public function listar($user, $estado_filter = null, $mes_filter = null, $anio_filter = null) {
-        return $this->requisicionModel->obtenerTodas($estado_filter, $user['rol'], $user['id'], $mes_filter, $anio_filter);
+    public function listar($user, $estado_filter = null, $mes_filter = null, $anio_filter = null, $mostrar_ocultas = false) {
+        return $this->requisicionModel->obtenerTodas($estado_filter, $user['rol'], $user['id'], $mes_filter, $anio_filter, $mostrar_ocultas);
     }
     
     public function crear($datos, $user) {
         $resultado = $this->requisicionModel->crear($datos);
         
         if ($resultado['success']) {
-            $productos_req = $datos['productos'];
-            $cantidades = $datos['cantidades'];
-            $unidades = $datos['unidades'];
+            $tipoRequisicion = $datos['tipo_requisicion'] ?? 'producto';
             
-            $productos_nombre_otros = [];
-            foreach ($_POST as $key => $value) {
-                if (strpos($key, 'producto_nombre_') === 0) {
-                    $index = str_replace('producto_nombre_', '', $key);
-                    $productos_nombre_otros[$index] = trim($value);
-                }
-            }
-            
-            $contador_otros = 0;
-            $indices_otros = array_keys($productos_nombre_otros);
-            sort($indices_otros); // Ordenar para procesar en orden
-            
-            for ($i = 0; $i < count($productos_req); $i++) {
-                if (!empty($productos_req[$i]) && !empty($cantidades[$i])) {
-                    $producto_id = ($productos_req[$i] != 'otro') ? intval($productos_req[$i]) : null;
-                    $producto_nombre = '';
-                    
-                    if ($producto_id) {
-                        // Producto del inventario
-                        $conn = getConnection();
-                        $sql = "SELECT nombre FROM inventario WHERE id = ?";
-                        $stmt = $conn->prepare($sql);
-                        $stmt->bind_param("i", $producto_id);
-                        $stmt->execute();
-                        $result = $stmt->get_result();
-                        if ($row = $result->fetch_assoc()) {
-                            $producto_nombre = $row['nombre'];
-                        }
-                        $stmt->close();
-                        $conn->close();
-                    } else {
-                        if (isset($indices_otros[$contador_otros])) {
-                            $indice_real = $indices_otros[$contador_otros];
-                            $producto_nombre = $productos_nombre_otros[$indice_real];
-                            $contador_otros++;
-                        }
+            if ($tipoRequisicion === 'servicio') {
+                // Procesar servicios
+                $productos_nombre = $datos['productos_nombre'] ?? [];
+                
+                foreach ($productos_nombre as $index => $nombre) {
+                    if (!empty($nombre)) {
+                        $detalle = [
+                            'producto_id' => null,
+                            'producto_nombre' => $nombre,
+                            'cantidad' => 1,
+                            'unidad' => 'servicio'
+                        ];
+                        
+                        $this->requisicionModel->agregarDetalle($resultado['id'], $detalle);
                     }
-                    
-                    $detalle = [
-                        'producto_id' => $producto_id,
-                        'producto_nombre' => $producto_nombre,
-                        'cantidad' => intval($cantidades[$i]),
-                        'unidad' => $unidades[$i]
-                    ];
-                    
-                    $this->requisicionModel->agregarDetalle($resultado['id'], $detalle);
                 }
+                
+                // Notificar a compras
+                $this->notificacionModel->notificarRol(
+                    'compras',
+                    'nueva_requisicion',
+                    'Nueva Requisición de Servicio',
+                    "Se ha recibido una nueva requisición de servicio {$resultado['folio']} de {$user['nombre_completo']}. Por favor revísala.",
+                    $resultado['id']
+                );
+            } else {
+                // Procesar productos (lógica existente)
+                $productos_req = $datos['productos'] ?? [];
+                $cantidades = $datos['cantidades'] ?? [];
+                $unidades = $datos['unidades'] ?? [];
+                
+                $productos_nombre_otros = $datos['productos_nombre'] ?? [];
+                
+                for ($i = 0; $i < count($productos_req); $i++) {
+                    if (!empty($productos_req[$i]) && !empty($cantidades[$i])) {
+                        $producto_id = ($productos_req[$i] != 'otro' && $productos_req[$i] != 'servicio') ? intval($productos_req[$i]) : null;
+                        $producto_nombre = '';
+                        
+                        if ($producto_id) {
+                            $conn = getConnection();
+                            $sql = "SELECT nombre FROM inventario WHERE id = ?";
+                            $stmt = $conn->prepare($sql);
+                            $stmt->bind_param("i", $producto_id);
+                            $stmt->execute();
+                            $result = $stmt->get_result();
+                            if ($row = $result->fetch_assoc()) {
+                                $producto_nombre = $row['nombre'];
+                            }
+                            $stmt->close();
+                        } else {
+                            // Usar el array paralelo productos_nombre_custom[] que tiene el mismo indice
+                            if (isset($productos_nombre_otros[$i]) && trim($productos_nombre_otros[$i]) !== '') {
+                                $producto_nombre = trim($productos_nombre_otros[$i]);
+                            }
+                        }
+                        
+                        $unidad_val = isset($unidades[$i]) && trim($unidades[$i]) !== '' ? trim($unidades[$i]) : 'pieza';
+                        
+                        // DEBUG
+                        file_put_contents('debug_detalle.log', date('Y-m-d H:i:s') . " - i=$i, unidades[$i]=" . ($unidades[$i] ?? 'NO_EXISTE') . ", unidad_val=$unidad_val, producto=$producto_nombre\n", FILE_APPEND);
+                        
+                        $detalle = [
+                            'producto_id' => $producto_id,
+                            'producto_nombre' => $producto_nombre,
+                            'cantidad' => intval($cantidades[$i]),
+                            'unidad' => $unidad_val
+                        ];
+                        
+                        $this->requisicionModel->agregarDetalle($resultado['id'], $detalle);
+                    }
+                }
+                
+                // Notificar a compras
+                $this->notificacionModel->notificarRol(
+                    'compras',
+                    'nueva_requisicion',
+                    'Nueva Requisición Recibida',
+                    "Se ha recibido una nueva requisición {$resultado['folio']} de {$user['nombre_completo']}. Por favor revísala.",
+                    $resultado['id']
+                );
             }
-            
-            // Notificar a compras
-            $this->notificacionModel->notificarRol(
-                'compras',
-                'nueva_requisicion',
-                'Nueva Requisición Recibida',
-                "Se ha recibido una nueva requisición {$resultado['folio']} de {$user['nombre_completo']}. Por favor revísala.",
-                $resultado['id']
-            );
             
             return ['success' => true, 'folio' => $resultado['folio']];
         }

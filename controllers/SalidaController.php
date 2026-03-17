@@ -18,6 +18,18 @@ class SalidaController {
         return $this->salidaModel->crear($datos);
     }
     
+    public function crearMultiple($datos_base, $productos) {
+        return $this->salidaModel->crearMultiple($datos_base, $productos);
+    }
+    
+    public function obtenerRequisicionesCompletadas($sub_almacen_id = null) {
+        return $this->salidaModel->obtenerRequisicionesCompletadas($sub_almacen_id);
+    }
+    
+    public function obtenerProductosRequisicion($requisicion_id) {
+        return $this->salidaModel->obtenerProductosRequisicion($requisicion_id);
+    }
+    
     public function obtenerSalidas($usuario_id, $sub_almacen_id = null) {
         return $this->salidaModel->obtenerPorUsuario($usuario_id, $sub_almacen_id);
     }

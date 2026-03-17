@@ -78,7 +78,7 @@ CREATE TABLE inventario (
 CREATE TABLE requisiciones (
     id INT PRIMARY KEY AUTO_INCREMENT,
     folio VARCHAR(50) UNIQUE NOT NULL,
-    sub_almacen_id INT NOT NULL,
+    sub_almacen_id INT NULL, -- Permitir NULL para usuarios sin sub-almacén asignado (admin, compras, gerencia)
     usuario_id INT NOT NULL,
     solicitante VARCHAR(200) NOT NULL,
     fecha_solicitud DATE NOT NULL,
@@ -94,7 +94,7 @@ CREATE TABLE requisiciones (
     fecha_aprobacion_general TIMESTAMP NULL,
     agregado_a_inventario TINYINT(1) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (sub_almacen_id) REFERENCES sub_almacenes(id),
+    FOREIGN KEY (sub_almacen_id) REFERENCES sub_almacenes(id), -- La foreign key sigue funcionando con NULL
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
     FOREIGN KEY (cotizado_por) REFERENCES usuarios(id),
     FOREIGN KEY (aprobado_por) REFERENCES usuarios(id),

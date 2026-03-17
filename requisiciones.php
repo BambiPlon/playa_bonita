@@ -10,10 +10,21 @@ $requisicionController = new RequisicionController();
 $estado_filter = isset($_GET['estado']) ? $_GET['estado'] : null;
 $mes_filter = isset($_GET['mes']) ? $_GET['mes'] : null;
 $anio_filter = isset($_GET['anio']) ? $_GET['anio'] : date('Y');
-$requisiciones = $requisicionController->listar($user, $estado_filter, $mes_filter, $anio_filter);
+
+$mostrar_ocultas = isset($_GET['mostrar_ocultas']) && $_GET['mostrar_ocultas'] == '1' ? true : false;
+
+$requisiciones = $requisicionController->listar($user, $estado_filter, $mes_filter, $anio_filter, $mostrar_ocultas);
 
 $mensaje = '';
 $tipo_mensaje = '';
+
+// Verificar si hay mensaje en sesión
+if (isset($_SESSION['mensaje'])) {
+    $mensaje = $_SESSION['mensaje'];
+    $tipo_mensaje = $_SESSION['tipo_mensaje'] ?? 'info';
+    unset($_SESSION['mensaje']);
+    unset($_SESSION['tipo_mensaje']);
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado'])) {
     $roles_privilegiados = ['admin', 'compras', 'gerencia', 'gerencia_general'];
@@ -28,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado'])) {
         if ($requisicionController->cambiarEstado($requisicion_id, $nuevo_estado)) {
             $mensaje = "Estado actualizado correctamente";
             $tipo_mensaje = "success";
-            $requisiciones = $requisicionController->listar($user, $estado_filter, $mes_filter, $anio_filter);
+            $requisiciones = $requisicionController->listar($user, $estado_filter, $mes_filter, $anio_filter, $mostrar_ocultas);
         } else {
             $mensaje = "Error al actualizar el estado";
             $tipo_mensaje = "error";
@@ -38,4 +49,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado'])) {
 
 require_once 'views/requisiciones.view.php';
 ?>
-

@@ -6,7 +6,6 @@ $authController->checkPermission();
 
 $user = $authController->getCurrentUser();
 
-// Solo el rol de compras puede cotizar
 if ($user['rol'] !== 'compras') {
     header('Location: requisiciones.php');
     exit;
@@ -16,11 +15,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $requisicion_id = intval($_POST['requisicion_id']);
     $precios = $_POST['precios'] ?? [];
     $proveedores = $_POST['proveedores'] ?? [];
+    $unidades = $_POST['unidades'] ?? [];
+    $porcentaje_iva = floatval($_POST['porcentaje_iva'] ?? 16);
     
     $requisicionModel = new Requisicion();
     $notificacionModel = new Notificacion();
     
-    $totalCotizado = 0;
+    $subtotalSinIVA = 0;
     $db = getConnection();
     
     try {
@@ -30,9 +31,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $precio = floatval($precio);
             $detalle_id = intval($detalle_id);
             $proveedor_id = isset($proveedores[$detalle_id]) ? intval($proveedores[$detalle_id]) : null;
+            $unidad = isset($unidades[$detalle_id]) ? trim($unidades[$detalle_id]) : null;
             
-            $stmt = $db->prepare("UPDATE requisicion_detalles SET precio_cotizado = ?, proveedor_id = ? WHERE id = ?");
-            $stmt->bind_param("dii", $precio, $proveedor_id, $detalle_id);
+            // Actualizar precio cotizado (sin IVA), proveedor y unidad
+            if ($unidad) {
+                $stmt = $db->prepare("UPDATE requisicion_detalles SET precio_cotizado = ?, proveedor_id = ?, unidad = ? WHERE id = ?");
+                $stmt->bind_param("disi", $precio, $proveedor_id, $unidad, $detalle_id);
+            } else {
+                $stmt = $db->prepare("UPDATE requisicion_detalles SET precio_cotizado = ?, proveedor_id = ? WHERE id = ?");
+                $stmt->bind_param("dii", $precio, $proveedor_id, $detalle_id);
+            }
             $stmt->execute();
             $stmt->close();
             
@@ -45,12 +53,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $cantidad = $row['cantidad'];
             $stmtCant->close();
             
-            $totalCotizado += ($precio * $cantidad);
+            $subtotalSinIVA += ($precio * $cantidad);
         }
         
-        // Actualizar requisición
-        $stmt = $db->prepare("UPDATE requisiciones SET estado = 'en_gerencia', monto_cotizado = ?, fecha_cotizacion = NOW() WHERE id = ?");
-        $stmt->bind_param("di", $totalCotizado, $requisicion_id);
+        $iva = $subtotalSinIVA * ($porcentaje_iva / 100);
+        $totalConIVA = $subtotalSinIVA + $iva;
+        
+        $stmt = $db->prepare("UPDATE requisiciones SET estado = 'en_gerencia', monto_cotizado = ?, porcentaje_iva = ?, fecha_cotizacion = NOW() WHERE id = ?");
+        $stmt->bind_param("ddi", $totalConIVA, $porcentaje_iva, $requisicion_id);
         $stmt->execute();
         $stmt->close();
         
@@ -60,12 +70,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $notificacionModel->notificarRol(
             'gerencia',
             'Requisición cotizada',
-            "La requisición #$requisicion_id ha sido cotizada por compras. Monto total: $" . number_format($totalCotizado, 2),
+            "La requisición #$requisicion_id ha sido cotizada por compras. Subtotal: $" . number_format($subtotalSinIVA, 2) . " + IVA ({$porcentaje_iva}%): $" . number_format($iva, 2) . " = Total: $" . number_format($totalConIVA, 2),
             'requisicion',
             $requisicion_id
         );
         
-        $_SESSION['mensaje'] = 'Cotización enviada a gerencia exitosamente';
+        $_SESSION['mensaje'] = 'Cotización enviada a gerencia exitosamente. Total con IVA (' . $porcentaje_iva . '%): $' . number_format($totalConIVA, 2);
         $_SESSION['tipo_mensaje'] = 'success';
         
     } catch (Exception $e) {
@@ -80,3 +90,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 header('Location: requisiciones.php');
 exit;
+?>

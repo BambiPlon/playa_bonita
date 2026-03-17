@@ -94,6 +94,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $resultado = $usuarioModel->actualizar($usuario_id, $datos);
         
+        // Si se pidio cambio de contrasena, actualizarla por separado
+        if ($resultado && $cambiar_password) {
+            $usuarioModel->actualizarPassword($usuario_id, $password);
+        }
+        
         if ($resultado) {
             if (isset($_SESSION['user_id']) && $_SESSION['user_id'] == $usuario_id) {
                 $_SESSION['user_nombre'] = $nombre_completo;

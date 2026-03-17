@@ -118,10 +118,16 @@ class Producto {
         return $result;
     }
     
-    public function buscarPorNombre($nombre, $sub_almacen_id) {
-        $sql = "SELECT * FROM inventario WHERE nombre = ? AND sub_almacen_id = ?";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("si", $nombre, $sub_almacen_id);
+    public function buscarPorNombre($nombre, $sub_almacen_id, $unidad = null) {
+        if ($unidad) {
+            $sql = "SELECT * FROM inventario WHERE nombre = ? AND sub_almacen_id = ? AND LOWER(unidad) = LOWER(?)";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("sis", $nombre, $sub_almacen_id, $unidad);
+        } else {
+            $sql = "SELECT * FROM inventario WHERE nombre = ? AND sub_almacen_id = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("si", $nombre, $sub_almacen_id);
+        }
         $stmt->execute();
         $result = $stmt->get_result();
         $producto = $result->fetch_assoc();
@@ -143,7 +149,7 @@ class Producto {
                 FROM inventario 
                 WHERE nombre LIKE ? AND (activo = 1 OR activo IS NULL)
                 GROUP BY nombre, codigo, unidad, precio_unitario, stock_minimo, descripcion
-                ORDER BY nombre
+                ORDER BY nombre, unidad
                 LIMIT ?";
         
         $stmt = $this->conn->prepare($sql);
@@ -287,9 +293,5 @@ class Producto {
         }
     }
     
-    public function __destruct() {
-        if ($this->conn) {
-            $this->conn->close();
-        }
-    }
+    // Conexión manejada por singleton - no cerrar aquí
 }

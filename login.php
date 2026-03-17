@@ -3,7 +3,6 @@ require_once 'init.php';
 
 $authController = new AuthController();
 
-// Si ya está logueado, redirigir al dashboard
 if ($authController->isLoggedIn()) {
     header('Location: index.php');
     exit();
@@ -20,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: index.php');
             exit();
         } else {
-            $error = 'Usuario o contraseña incorrectos';
+            $error = 'Usuario o contrasena incorrectos';
         }
     } else {
         $error = 'Por favor complete todos los campos';
@@ -32,314 +31,233 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login - Sistema de Inventario</title>
+<title>Login - Playa Bonita</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
 :root{
-  --navy-1:#0a192f;
-  --navy-2:#1d3557;
-  --navy-3:#2c4a6d;
-  --cyan:#00BCD4;
-
-  --panel:#f8fafc;
-  --text:#0f172a;
-  --muted:#64748b;
-  --danger:#F44336;
+    --blue:#2563eb;
+    --blue-dark:#1d4ed8;
+    --text:#0f172a;
+    --muted:#64748b;
+    --muted2:#94a3b8;
 }
 
-*{margin:0;padding:0;box-sizing:border-box}
+*{ box-sizing:border-box; }
 
 body{
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;
-  min-height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:24px;
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
 
-  background:
-    radial-gradient(1200px 600px at 20% 20%, rgba(0,188,212,.22), transparent 55%),
-    radial-gradient(900px 500px at 80% 80%, rgba(44,74,109,.35), transparent 55%),
-    linear-gradient(135deg,var(--navy-1),var(--navy-2),var(--navy-3));
+    background:
+        radial-gradient(900px 500px at 50% 20%, rgba(37,99,235,0.14), transparent 60%),
+        radial-gradient(900px 500px at 50% 85%, rgba(245,130,32,0.08), transparent 65%),
+        linear-gradient(135deg, #f8fafc, #e5e7eb);
 }
 
-.shell{
-  width:100%;
-  max-width:1100px;
-  filter:drop-shadow(0 28px 80px rgba(0,0,0,.45));
-  animation:fadeIn .55s ease-out;
-}
-
-@keyframes fadeIn{
-  from{opacity:0;transform:translateY(12px)}
-  to{opacity:1;transform:translateY(0)}
+/* 🔹 MÁS DELGADO */
+.login-wrapper{
+    width:100%;
+    max-width:460px; /* antes 600px */
+    margin:0 auto;
 }
 
 .login-card{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  border-radius:22px;
-  overflow:hidden;
-  background:#fff;
-  box-shadow:0 40px 90px rgba(0,0,0,.45);
+    width:100%;
+    padding:42px; /* antes 60px */
+    border-radius:24px;
+    background: rgba(255,255,255,0.95);
+    border:1px solid rgba(15,23,42,0.06);
+
+    box-shadow:
+        0 -8px 20px rgba(15,23,42,0.05),
+        0 18px 50px rgba(15,23,42,0.12);
+
+    text-align:center;
 }
 
-/* PANEL IZQUIERDO */
-.brand-panel{
-  position:relative;
-  background:linear-gradient(135deg,#1b3556 0%,#2c4a6d 55%,#16324f 100%);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:64px;
-  color:#fff;
+/* LOGO */
+.login-logo{
+    margin-bottom:18px;
+}
+.login-logo img{
+    max-width:220px; /* ligeramente más pequeño */
+    height:auto;
 }
 
-.brand-panel::before{
-  content:"";
-  position:absolute;
-  inset:-45%;
-  background:radial-gradient(circle, rgba(0,188,212,.18) 0%, transparent 60%);
-  animation:pulse 8s ease-in-out infinite;
+/* TITULO */
+.login-title{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 12px;
+    border-radius:999px;
+    background: linear-gradient(180deg, rgba(37,99,235,0.08), rgba(255,255,255,0));
+    border:1px solid rgba(15,23,42,0.08);
+    color: rgba(15,23,42,0.75);
+    font-size:11px;
+    letter-spacing:0.2em;
+    text-transform:uppercase;
+    font-weight:700;
+    margin-bottom:26px;
 }
 
-@keyframes pulse{
-  0%,100%{transform:scale(1);opacity:.55}
-  50%{transform:scale(1.12);opacity:.85}
+/* FORM */
+form{
+    width:100%;
+    max-width:380px; /* más estrecho */
+    margin:0 auto;
+    text-align:left;
 }
 
-.brand-content{
-  position:relative;
-  z-index:1;
-  text-align:center;
+/* Floating Field */
+.field{
+    margin-bottom:16px;
+}
+.field .control{
+    position:relative;
+}
+.field .icon{
+    position:absolute;
+    left:14px;
+    top:50%;
+    transform:translateY(-50%);
+    font-size:14px;
+    color: rgba(15,23,42,0.40);
 }
 
-/* LOGO GRANDE SIN CUADRO */
-.brand-logo{
-  width:300px;
-  margin:0 auto 26px;
-  animation:floaty 3.2s ease-in-out infinite;
+.field input{
+    width:100%;
+    height:52px; /* más estilizado */
+    padding:0 14px 0 42px;
+    border-radius:16px;
+    border:1px solid rgba(15,23,42,0.12);
+    background: rgba(255,255,255,0.80);
+    font-size:13px;
+    transition: 200ms ease;
+    outline:none;
+    box-shadow: 0 4px 14px rgba(15,23,42,0.06);
 }
 
-@keyframes floaty{
-  0%,100%{transform:translateY(0)}
-  50%{transform:translateY(-12px)}
+.field input::placeholder{ color: transparent; }
+
+.field label{
+    position:absolute;
+    left:42px;
+    top:50%;
+    transform: translateY(-50%);
+    font-size:12px;
+    color: rgba(15,23,42,0.50);
+    font-weight:700;
+    transition: 200ms ease;
+    pointer-events:none;
 }
 
-.brand-logo img{
-  width:100%;
-  object-fit:contain;
-  filter:drop-shadow(0 18px 32px rgba(0,0,0,.35));
-  user-select:none;
+.field input:focus{
+    border-color: rgba(37,99,235,0.55);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
 }
 
-.brand-title{
-  font-size:30px;
-  font-weight:900;
-  margin-bottom:8px;
+.field input:focus ~ label,
+.field input:not(:placeholder-shown) ~ label{
+    top:0;
+    transform: translateY(-50%);
+    background:#fff;
+    padding:0 6px;
+    font-size:11px;
+    color: rgba(37,99,235,0.85);
 }
 
-.brand-subtitle{
-  font-size:13px;
-  opacity:.9;
-}
-
-/* PANEL DERECHO */
-.form-panel{
-  background:var(--panel);
-  padding:64px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-
-.form-wrap{
-  width:100%;
-  max-width:430px;
-}
-
-.form-header h2{
-  font-size:26px;
-  font-weight:900;
-  color:var(--text);
-}
-
-.form-header p{
-  font-size:13px;
-  color:var(--muted);
-  margin:6px 0 22px;
-}
-
-.error-message{
-  background:rgba(244,67,54,.1);
-  color:var(--danger);
-  padding:12px 14px;
-  border-radius:12px;
-  margin-bottom:16px;
-  display:flex;
-  gap:10px;
-  font-size:13px;
-}
-
-.field{margin-bottom:16px}
-
-label{
-  font-size:12px;
-  font-weight:800;
-  color:#334155;
-  margin-bottom:8px;
-  display:block;
-}
-
-.input-wrap{position:relative}
-
-.input-icon{
-  position:absolute;
-  left:14px;
-  top:50%;
-  transform:translateY(-50%);
-  color:#94a3b8;
-}
-
-input{
-  width:100%;
-  padding:14px 46px 14px 42px;
-  border-radius:12px;
-  border:2px solid #e2e8f0;
-  font-size:14px;
-}
-
-input:focus{
-  outline:none;
-  border-color:var(--navy-2);
-  box-shadow:0 0 0 4px rgba(29,53,87,.15);
-}
-
-.toggle-password{
-  position:absolute;
-  right:10px;
-  top:50%;
-  transform:translateY(-50%);
-  width:36px;
-  height:36px;
-  border:none;
-  background:#fff;
-  border-radius:10px;
-  cursor:pointer;
-}
-
+/* BOTÓN */
 .btn-login{
-  width:100%;
-  border-radius:999px;
-  border:none;
-  padding:14px;
-  font-weight:900;
-  background:linear-gradient(135deg,var(--navy-2),var(--navy-3));
-  color:#fff;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  gap:10px;
-  box-shadow:0 18px 35px rgba(29,53,87,.35);
-  cursor:pointer;
-  margin-top:10px;
+    width:100%;
+    height:54px;
+    border:none;
+    border-radius:18px;
+    background: linear-gradient(135deg,var(--blue),var(--blue-dark));
+    color:white;
+    font-weight:700;
+    font-size:14px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    transition: 220ms ease;
+    box-shadow: 0 16px 40px rgba(37,99,235,0.25);
+    margin-top:6px;
 }
 
-.test-box{
-  margin-top:18px;
-  background:#eef4ff;
-  padding:16px;
-  border-radius:16px;
-  font-size:12px;
+.btn-login:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 22px 55px rgba(37,99,235,0.32);
 }
 
-.test-box strong{color:#0f172a}
-
-@media(max-width:900px){
-  .login-card{grid-template-columns:1fr}
-  .brand-logo{width:180px}
+/* FOOTER */
+.login-footer{
+    margin-top:18px;
+    font-size:12px;
+    color: var(--muted2);
 }
 </style>
 </head>
-
 <body>
-<div class="shell">
-  <div class="login-card">
 
-    <!-- IZQUIERDA -->
-    <section class="brand-panel">
-      <div class="brand-content">
-        <div class="brand-logo">
-          <img src="assets/img/Logo playabonita.png" alt="Playa Bonita Resorts">
-        </div>
-      </div>
-    </section>
+<div class="login-wrapper">
+    <div class="login-card">
 
-    <!-- DERECHA -->
-    <section class="form-panel">
-      <div class="form-wrap">
-        <div class="form-header">
-          <h2>Bienvenido</h2>
-          <p>Ingresa tus credenciales para continuar</p>
+        <div class="login-logo">
+            <img src="assets/img/logo.png" alt="Playa Bonita Resort">
         </div>
 
-        <?php if($error): ?>
-          <div class="error-message">
-            <i class="fas fa-circle-exclamation"></i>
-            <?php echo htmlspecialchars($error); ?>
-          </div>
+        <div class="login-title">
+            <i class="fa-solid fa-shield-halved"></i>
+            Acceso al Sistema
+        </div>
+
+        <?php if ($error): ?>
+            <div class="login-error">
+                <i class="fas fa-exclamation-circle"></i>
+                <?php echo htmlspecialchars($error); ?>
+            </div>
         <?php endif; ?>
 
-        <form method="POST">
-          <div class="field">
-            <label>Usuario</label>
-            <div class="input-wrap">
-              <i class="fas fa-user input-icon"></i>
-              <input type="text" name="username" placeholder="Ingrese su usuario" required>
+        <form method="POST" action="login.php">
+
+            <div class="field">
+                <div class="control">
+                    <i class="fa-solid fa-user icon"></i>
+                    <input type="text" name="username" placeholder=" " required autofocus>
+                    <label>Usuario</label>
+                </div>
             </div>
-          </div>
 
-          <div class="field">
-            <label>Contraseña</label>
-            <div class="input-wrap">
-              <i class="fas fa-lock input-icon"></i>
-              <input type="password" id="password" name="password" placeholder="Ingrese su contraseña" required>
-              <button type="button" class="toggle-password" id="togglePassword">
-                <i class="fas fa-eye" id="toggleIcon"></i>
-              </button>
+            <div class="field">
+                <div class="control">
+                    <i class="fa-solid fa-lock icon"></i>
+                    <input type="password" name="password" placeholder=" " required>
+                    <label>Contrasena</label>
+                </div>
             </div>
-          </div>
 
-          <button class="btn-login">
-            <i class="fas fa-right-to-bracket"></i>
-            Iniciar Sesión
-          </button>
-
-          <div class="test-box">
-            <strong>Usuarios de prueba</strong><br>
-            admin, compras, gerencia, tecnologia, recepcion<br>
-            <strong>Contraseña:</strong> 123456
-          </div>
+            <button type="submit" class="btn-login">
+                <i class="fas fa-right-to-bracket"></i>
+                Iniciar Sesio
+            </button>
         </form>
-      </div>
-    </section>
 
-  </div>
+        <div class="login-footer">
+            Playa Bonita Resort
+        </div>
+
+    </div>
 </div>
 
-<script>
-const btn=document.getElementById('togglePassword');
-const input=document.getElementById('password');
-const icon=document.getElementById('toggleIcon');
-
-btn.onclick=()=>{
-  const show=input.type==='password';
-  input.type=show?'text':'password';
-  icon.classList.toggle('fa-eye');
-  icon.classList.toggle('fa-eye-slash');
-};
-</script>
 </body>
 </html>

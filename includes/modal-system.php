@@ -220,6 +220,7 @@ const CustomModal = {
             this.modal.classList.add('confirm-modal');
             iconEl.classList.add('warning');
             iconEl.innerHTML = '⚠';
+            titleEl.textContent = 'LOCALHOST DICE';
             messageEl.textContent = message;
             
             if (description) {

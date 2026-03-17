@@ -35,46 +35,30 @@ $_SESSION['user_sub_almacen_nombre'] = $usuarioData['sub_almacen_nombre'];
 $roles_privilegiados = ['admin', 'gerencia', 'gerencia_general'];
 $puede_seleccionar = in_array($usuarioData['rol'], $roles_privilegiados);
 
-if ($usuarioData['rol'] === 'departamento' && empty($usuarioData['sub_almacen_id'])) {
-    $_SESSION['mensaje'] = "Tu cuenta no tiene un sub-almacén asignado. Por favor contacta al administrador para que te asigne uno.";
-    $_SESSION['tipo_mensaje'] = 'danger';
-    header('Location: index.php');
-    exit;
-}
+// Todos los productos se agregan al almacen general (ID 100)
 
 $mensaje = '';
 $tipo_mensaje = 'success';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $sub_almacen_id = isset($_POST['sub_almacen_id']) ? intval($_POST['sub_almacen_id']) : null;
-    
-    $puede_agregar = false;
+    $sub_almacen_id = 100; // Siempre almacen general
+    $puede_agregar = true;
     $mensaje_error = '';
-    
-    if ($usuarioData['rol'] === 'compras') {
-        $puede_agregar = true;
-        $sub_almacen_id = 100;
-    } elseif ($puede_seleccionar) {
-        if ($sub_almacen_id) {
-            $puede_agregar = true;
-        } else {
-            $mensaje_error = 'Debes seleccionar un sub-almacén.';
-        }
-    } else {
-        if ($sub_almacen_id == $usuarioData['sub_almacen_id']) {
-            $puede_agregar = true;
-        } else {
-            $mensaje_error = 'Solo puedes agregar productos a tu propio sub-almacén.';
-        }
-    }
     
     if ($puede_agregar) {
         $codigo = trim($_POST['codigo']);
-        $cantidad_nueva = intval($_POST['cantidad']);
+        $cantidad_nueva = intval($_POST['cantidad'] ?? 0);
         
         $productoModel = new Producto();
+        $unidad_enviada = !empty(trim($_POST['unidad'])) ? trim($_POST['unidad']) : 'pieza';
         
         $producto_existente = $productoModel->buscarPorCodigo($codigo, $sub_almacen_id);
+        
+        // Si el producto existe pero la unidad es diferente, crear uno nuevo
+        if ($producto_existente && strtolower(trim($producto_existente['unidad'])) !== strtolower($unidad_enviada)) {
+            $producto_existente = null; // Forzar creacion de nuevo registro
+            $codigo = 'ALM-100-' . strtoupper(substr(md5(uniqid(rand(), true)), 0, 6)); // Nuevo codigo unico
+        }
         
         if ($producto_existente) {
             $resultado = $productoModel->incrementarCantidad($producto_existente['id'], $cantidad_nueva);
@@ -91,10 +75,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'codigo' => $codigo,
                 'nombre' => trim($_POST['nombre']),
                 'descripcion' => trim($_POST['descripcion'] ?? ''),
-                'unidad' => trim($_POST['unidad']),
+                'unidad' => !empty(trim($_POST['unidad'])) ? trim($_POST['unidad']) : 'pieza',
                 'cantidad' => $cantidad_nueva,
                 'precio_unitario' => floatval($_POST['precio_unitario'] ?? 0),
-                'stock_minimo' => intval($_POST['stock_minimo'] ?? 10),
+                'stock_minimo' => intval($_POST['stock_minimo'] ?? 0),
                 'sub_almacen_id' => $sub_almacen_id
             ];
             
