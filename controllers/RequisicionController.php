@@ -12,8 +12,12 @@ class RequisicionController {
         $this->notificacionModel = new Notificacion();
     }
     
-    public function listar($user, $estado_filter = null, $mes_filter = null, $anio_filter = null, $mostrar_ocultas = false) {
-        return $this->requisicionModel->obtenerTodas($estado_filter, $user['rol'], $user['id'], $mes_filter, $anio_filter, $mostrar_ocultas);
+    public function listar($user, $estado_filter = null, $mes_filter = null, $anio_filter = null, $mostrar_ocultas = false, $usuario_filter = null) {
+        return $this->requisicionModel->obtenerTodas($estado_filter, $user['rol'], $user['id'], $mes_filter, $anio_filter, $mostrar_ocultas, $usuario_filter);
+    }
+    
+    public function obtenerUsuariosConRequisiciones() {
+        return $this->requisicionModel->obtenerUsuariosConRequisiciones();
     }
     
     public function crear($datos, $user) {
@@ -79,9 +83,6 @@ class RequisicionController {
                         }
                         
                         $unidad_val = isset($unidades[$i]) && trim($unidades[$i]) !== '' ? trim($unidades[$i]) : 'pieza';
-                        
-                        // DEBUG
-                        file_put_contents('debug_detalle.log', date('Y-m-d H:i:s') . " - i=$i, unidades[$i]=" . ($unidades[$i] ?? 'NO_EXISTE') . ", unidad_val=$unidad_val, producto=$producto_nombre\n", FILE_APPEND);
                         
                         $detalle = [
                             'producto_id' => $producto_id,

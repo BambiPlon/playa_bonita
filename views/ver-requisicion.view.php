@@ -137,12 +137,14 @@
                     <table class="data-table" style="width: 100%; border-collapse: separate; border-spacing: 0;">
                         <thead>
                             <tr style="background: var(--gray-50);">
+                                <th style="color: var(--gray-500); padding: 0.75rem 1rem; text-align: center; font-weight: 600; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color); width: 50px;"></th>
                                 <th style="color: var(--gray-500); padding: 0.75rem 1rem; text-align: left; font-weight: 600; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color);">Producto</th>
-                                <th style="color: var(--gray-500); padding: 0.75rem 1rem; text-align: center; font-weight: 600; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color);">Cantidad</th>
-                                <th style="color: var(--gray-500); padding: 0.75rem 1rem; text-align: center; font-weight: 600; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color);">Unidad</th>
+                                <th style="color: var(--gray-500); padding: 0.75rem 1rem; text-align: center; font-weight: 600; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color); width: 80px;">Cant.</th>
+                                <th style="color: var(--gray-500); padding: 0.75rem 1rem; text-align: center; font-weight: 600; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color); width: 80px;">Unidad</th>
+                                <th style="color: var(--gray-500); padding: 0.75rem 1rem; text-align: center; font-weight: 600; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color); width: 110px;"><i class="fas fa-warehouse"></i> Almacen</th>
                                 <th style="color: var(--gray-500); padding: 0.75rem 1rem; text-align: left; font-weight: 600; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color);">Proveedor</th>
-                                <th style="color: var(--gray-500); padding: 0.75rem 1rem; text-align: right; font-weight: 600; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color);">Precio Cotizado</th>
-                                <th style="color: var(--gray-500); padding: 0.75rem 1rem; text-align: right; font-weight: 600; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color);">Subtotal</th>
+                                <th style="color: var(--gray-500); padding: 0.75rem 1rem; text-align: right; font-weight: 600; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color); width: 110px;">Precio</th>
+                                <th style="color: var(--gray-500); padding: 0.75rem 1rem; text-align: right; font-weight: 600; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color); width: 100px;">Subtotal</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -152,13 +154,72 @@
                             
                             foreach ($detalles as $detalle): ?>
                             <!-- Filas con hover y mejor espaciado -->
+                            <?php 
+                            $productosStock = isset($stockDisponible[$detalle['id']]) ? $stockDisponible[$detalle['id']] : [];
+                            $tieneStock = !empty($productosStock);
+                            ?>
                             <tr style="border-bottom: 1px solid #e5e7eb; transition: all 0.2s ease; background: white;" 
                                 onmouseover="this.style.background='#f8fafc'" 
-                                onmouseout="this.style.background='white'">
-                                <td style="color: #1f2937; padding: 20px; font-weight: 500;"><?php echo htmlspecialchars($detalle['producto_nombre']); ?></td>
-                                <td style="color: #1f2937; padding: 20px; text-align: center; font-weight: 500;"><?php echo $detalle['cantidad']; ?></td>
-                                <td style="color: #64748b; padding: 20px; text-align: center;"><?php echo ucfirst(htmlspecialchars($detalle['unidad'] ?? 'pieza')); ?></td>
-                                <td style="padding: 20px;">
+                                onmouseout="this.style.background='white'"
+                                data-detalle-id="<?php echo $detalle['id']; ?>"
+                                id="fila-detalle-<?php echo $detalle['id']; ?>">
+                                <!-- Botón quitar producto -->
+                                <td style="padding: 10px; text-align: center;">
+                                    <button type="button" 
+                                            onclick="quitarProductoCotizacion(<?php echo $detalle['id']; ?>, '<?php echo htmlspecialchars(addslashes($detalle['producto_nombre'])); ?>')"
+                                            style="background: #fee2e2; color: #dc2626; border: none; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; transition: all 0.2s;"
+                                            onmouseover="this.style.background='#dc2626'; this.style.color='white'"
+                                            onmouseout="this.style.background='#fee2e2'; this.style.color='#dc2626'"
+                                            title="Quitar producto">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                    <input type="hidden" name="productos_incluidos[]" value="<?php echo $detalle['id']; ?>" class="producto-incluido">
+                                </td>
+                                <td style="color: #1f2937; padding: 12px; font-weight: 500; font-size: 14px;"><?php echo htmlspecialchars($detalle['producto_nombre']); ?></td>
+                                <td style="padding: 12px; text-align: center;">
+                                    <input type="number" 
+                                           name="cantidades[<?php echo $detalle['id']; ?>]" 
+                                           value="<?php echo $detalle['cantidad']; ?>" 
+                                           min="1" 
+                                           class="cantidad-input"
+                                           data-detalle-id="<?php echo $detalle['id']; ?>"
+                                           onchange="actualizarSubtotalFila(<?php echo $detalle['id']; ?>)"
+                                           style="width: 70px; text-align: center; font-weight: 600; padding: 8px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; background: #f8fafc;"
+                                           onfocus="this.style.borderColor='#2563eb'; this.style.boxShadow='0 0 0 3px rgba(37, 99, 235, 0.1)'"
+                                           onblur="this.style.borderColor='#e2e8f0'; this.style.boxShadow='none'">
+                                </td>
+                                <td style="color: #64748b; padding: 12px; text-align: center; font-size: 13px;"><?php echo ucfirst(htmlspecialchars($detalle['unidad'] ?? 'pieza')); ?></td>
+                                <!-- Columna de Stock en Almacen - Botón simplificado -->
+                                <td style="padding: 10px; text-align: center;">
+                                    <?php if ($tieneStock): 
+                                        $stockTotal = array_sum(array_column($productosStock, 'cantidad'));
+                                        $primerProducto = $productosStock[0];
+                                    ?>
+                                        <input type="hidden" name="surtir_almacen[<?php echo $detalle['id']; ?>]" value="" class="surtir-almacen-input" data-detalle-id="<?php echo $detalle['id']; ?>">
+                                        <input type="hidden" class="stock-data" data-detalle-id="<?php echo $detalle['id']; ?>" 
+                                               data-productos='<?php echo htmlspecialchars(json_encode($productosStock)); ?>'
+                                               data-cantidad-requerida="<?php echo $detalle['cantidad']; ?>">
+                                        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                                            <button type="button" 
+                                                    onclick="toggleSurtirAlmacenBtn(<?php echo $detalle['id']; ?>)"
+                                                    class="btn-surtir-almacen"
+                                                    data-activo="false"
+                                                    data-detalle-id="<?php echo $detalle['id']; ?>"
+                                                    style="background: #ecfdf5; color: #059669; border: 2px solid #10b981; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px; transition: all 0.2s; display: flex; align-items: center; gap: 6px;"
+                                                    title="<?php echo $stockTotal; ?> en stock">
+                                                <i class="fas fa-warehouse"></i>
+                                                <span>Surtir</span>
+                                            </button>
+                                            <span style="font-size: 10px; color: #059669; font-weight: 600; background: #d1fae5; padding: 2px 8px; border-radius: 10px;">
+                                                <i class="fas fa-box"></i> <?php echo $stockTotal; ?> disponible
+                                            </span>
+                                        </div>
+                                    <?php else: ?>
+                                        <span style="color: #9ca3af; font-size: 11px;"><i class="fas fa-times-circle"></i> Sin stock</span>
+                                        <input type="hidden" name="surtir_almacen[<?php echo $detalle['id']; ?>]" value="">
+                                    <?php endif; ?>
+                                </td>
+                                <td style="padding: 20px;" class="proveedor-cell" data-detalle="<?php echo $detalle['id']; ?>;">
                                     <!-- Select y botón mejorados con tema azul -->
                                     <div style="display: flex; gap: 8px; align-items: center;">
                                         <select class="form-control proveedor-select" 
@@ -199,29 +260,28 @@
                             <?php endforeach; ?>
                             <!-- Fila de total con diseño destacado -->
                             <tr style="background: var(--gray-50); border-top: 2px solid #2563eb;">
-                                <td colspan="5" style="color: #1f2937; font-weight: 600; padding: 24px 20px; text-align: right; font-size: 14px;">Subtotal (sin IVA):</td>
-                                <td style="padding: 24px 20px; text-align: right;">
+                                <td colspan="7" style="color: #1f2937; font-weight: 600; padding: 20px; text-align: right; font-size: 14px;">Subtotal (sin IVA):</td>
+                                <td style="padding: 20px; text-align: right;">
                                     <strong id="subtotalGeneral" style="color: #2563eb; font-size: 18px; font-weight: 700;">$0.00</strong>
                                 </td>
                             </tr>
                             <!-- Agregar selector de porcentaje de IVA -->
                             <tr style="background: var(--gray-50);">
-                                <td colspan="5" style="color: #1f2937; font-weight: 600; padding: 20px; text-align: right; font-size: 14px;">
+                                <td colspan="7" style="color: #1f2937; font-weight: 600; padding: 16px 20px; text-align: right; font-size: 14px;">
                                     IVA:
                                     <select id="porcentajeIva" name="porcentaje_iva" style="margin-left: 10px; padding: 5px 10px; border: 2px solid #2563eb; border-radius: 6px; background: white; color: #1f2937; font-weight: 600; cursor: pointer; outline: none;">
                                         <option value="16">16%</option>
                                         <option value="8">8%</option>
                                     </select>
                                 </td>
-                                <td style="padding: 20px; text-align: right;">
+                                <td style="padding: 16px 20px; text-align: right;">
                                     <strong id="ivaGeneral" style="color: #6b7280; font-size: 18px; font-weight: 600;">$0.00</strong>
                                 </td>
                             </tr>
-                            <!-- </CHANGE> -->
                             <tr style="background: var(--gray-50); border-top: 2px solid #2563eb;">
-                                <td colspan="5" style="color: #1f2937; font-weight: 600; padding: 24px 20px; text-align: right; font-size: 16px;">Total con IVA:</td>
-                                <td style="padding: 24px 20px; text-align: right;">
-                                    <strong id="totalGeneral" style="color: #2563eb; font-size: 24px; font-weight: 700; text-shadow: 0 2px 4px rgba(37, 99, 235, 0.1);">$0.00</strong>
+                                <td colspan="7" style="color: #1f2937; font-weight: 600; padding: 20px; text-align: right; font-size: 16px;">Total con IVA:</td>
+                                <td style="padding: 20px; text-align: right;">
+                                    <strong id="totalGeneral" style="color: #2563eb; font-size: 24px; font-weight: 700;">$0.00</strong>
                                 </td>
                             </tr>
                         </tbody>
@@ -267,33 +327,207 @@
     </div>
     
     <script>
-    // Calcular totales automáticamente
+    // Funcion para quitar producto de la cotizacion
+    function quitarProductoCotizacion(detalleId, nombreProducto) {
+        Swal.fire({
+            title: 'Quitar producto',
+            html: '¿Deseas quitar <strong>' + nombreProducto + '</strong> de la cotizacion?<br><small class="text-muted">Este producto no sera incluido en la cotizacion.</small>',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Si, quitar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const fila = document.getElementById('fila-detalle-' + detalleId);
+                if (fila) {
+                    // Remover el input hidden para que no se envie
+                    const inputIncluido = fila.querySelector('.producto-incluido');
+                    if (inputIncluido) inputIncluido.remove();
+                    
+                    // Marcar visualmente como quitado
+                    fila.style.opacity = '0.4';
+                    fila.style.background = '#fee2e2';
+                    fila.style.pointerEvents = 'none';
+                    
+                    // Deshabilitar todos los inputs de esta fila
+                    fila.querySelectorAll('input, select, button').forEach(el => {
+                        el.disabled = true;
+                    });
+                    
+                    // Agregar badge de quitado
+                    const tdProducto = fila.querySelector('td:nth-child(2)');
+                    if (tdProducto) {
+                        tdProducto.innerHTML += ' <span style="background: #dc2626; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;">QUITADO</span>';
+                    }
+                    
+                    recalcularTotales();
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Producto quitado',
+                        text: nombreProducto + ' no sera incluido en la cotizacion',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                }
+            }
+        });
+    }
+    
+    // Funcion para actualizar subtotal cuando cambia la cantidad
+    function actualizarSubtotalFila(detalleId) {
+        const row = document.querySelector('tr[data-detalle-id="' + detalleId + '"]');
+        if (!row) return;
+        
+        const cantidadInput = row.querySelector('.cantidad-input');
+        const precioInput = row.querySelector('.precio-cotizado');
+        const subtotalCell = row.querySelector('.subtotal');
+        
+        const cantidad = parseFloat(cantidadInput.value) || 0;
+        const precio = parseFloat(precioInput.value) || 0;
+        const subtotal = cantidad * precio;
+        
+        subtotalCell.textContent = '$' + subtotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        
+        // Actualizar data-cantidad-requerida para el botón surtir
+        const stockData = row.querySelector('.stock-data');
+        if (stockData) {
+            stockData.dataset.cantidadRequerida = cantidad;
+        }
+        
+        recalcularTotales();
+    }
+    
+    // Funcion para manejar el toggle de surtir desde almacen con boton
+    function toggleSurtirAlmacenBtn(detalleId) {
+        const btn = document.querySelector('.btn-surtir-almacen[data-detalle-id="' + detalleId + '"]');
+        const inputSurtir = document.querySelector('.surtir-almacen-input[data-detalle-id="' + detalleId + '"]');
+        const stockData = document.querySelector('.stock-data[data-detalle-id="' + detalleId + '"]');
+        const row = btn.closest('tr');
+        const proveedorCell = row.querySelector('.proveedor-cell');
+        const precioInput = row.querySelector('.precio-cotizado');
+        const subtotalCell = row.querySelector('.subtotal');
+        
+        const activo = btn.dataset.activo === 'true';
+        const productos = JSON.parse(stockData.dataset.productos);
+        const cantidadRequerida = parseInt(stockData.dataset.cantidadRequerida) || 0;
+        const primerProducto = productos[0];
+        const stockDisponible = parseInt(primerProducto.cantidad) || 0;
+        
+        if (!activo) {
+            // Activar surtir desde almacen
+            btn.dataset.activo = 'true';
+            btn.style.background = '#10b981';
+            btn.style.color = 'white';
+            btn.style.borderColor = '#059669';
+            btn.innerHTML = '<i class="fas fa-check"></i> <span>Almacen</span>';
+            
+            inputSurtir.value = primerProducto.id;
+            
+            // Deshabilitar proveedor y precio
+            const proveedorSelect = proveedorCell.querySelector('select');
+            const nuevoBtn = proveedorCell.querySelector('button');
+            if (proveedorSelect) {
+                proveedorSelect.disabled = true;
+                proveedorSelect.style.opacity = '0.4';
+                proveedorSelect.removeAttribute('required');
+            }
+            if (nuevoBtn) nuevoBtn.style.display = 'none';
+            
+            precioInput.disabled = true;
+            precioInput.style.opacity = '0.4';
+            precioInput.value = 0;
+            precioInput.removeAttribute('required');
+            
+            subtotalCell.innerHTML = '<span style="color: #10b981; font-weight: 600;"><i class="fas fa-warehouse"></i> $0.00</span>';
+            
+            // Verificar stock
+            if (stockDisponible < cantidadRequerida) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Stock insuficiente',
+                    html: 'Solo hay <strong>' + stockDisponible + '</strong> unidades disponibles.<br>Se requieren <strong>' + cantidadRequerida + '</strong> unidades.',
+                    confirmButtonColor: '#2563eb'
+                });
+            }
+            
+            row.style.background = '#ecfdf5';
+        } else {
+            // Desactivar - Cotizar normalmente
+            btn.dataset.activo = 'false';
+            btn.style.background = '#ecfdf5';
+            btn.style.color = '#059669';
+            btn.style.borderColor = '#10b981';
+            btn.innerHTML = '<i class="fas fa-warehouse"></i> <span>Surtir</span>';
+            
+            inputSurtir.value = '';
+            
+            const proveedorSelect = proveedorCell.querySelector('select');
+            const nuevoBtn = proveedorCell.querySelector('button');
+            if (proveedorSelect) {
+                proveedorSelect.disabled = false;
+                proveedorSelect.style.opacity = '1';
+                proveedorSelect.setAttribute('required', 'required');
+            }
+            if (nuevoBtn) nuevoBtn.style.display = 'inline-block';
+            
+            precioInput.disabled = false;
+            precioInput.style.opacity = '1';
+            precioInput.setAttribute('required', 'required');
+            
+            subtotalCell.textContent = '$0.00';
+            row.style.background = 'white';
+        }
+        
+        recalcularTotales();
+    }
+    
+    // Funcion para recalcular totales
+    function recalcularTotales() {
+        calcularTotales();
+    }
+    
+    // Calcular totales automaticamente
     document.querySelectorAll('.precio-cotizado').forEach(input => {
         input.addEventListener('input', calcularTotales);
     });
     
-    document.getElementById('porcentajeIva').addEventListener('change', calcularTotales);
+    document.getElementById('porcentajeIva')?.addEventListener('change', calcularTotales);
     
     function calcularTotales() {
         let subtotal = 0;
         document.querySelectorAll('.precio-cotizado').forEach(input => {
+            // Saltar los que se surten desde almacen o estan quitados
+            const row = input.closest('tr');
+            const estaQuitado = !row.querySelector('.producto-incluido');
+            if (input.disabled || estaQuitado) return;
+            
             const precio = parseFloat(input.value) || 0;
             const cantidad = parseInt(input.dataset.cantidad) || 0;
             const subtotalProducto = precio * cantidad;
             
-            const row = input.closest('tr');
-            row.querySelector('.subtotal').textContent = '$' + subtotalProducto.toFixed(2);
+            const subtotalCell = row.querySelector('.subtotal');
+            if (subtotalCell && !subtotalCell.innerHTML.includes('Almacen')) {
+                subtotalCell.textContent = '$' + subtotalProducto.toFixed(2);
+            }
             
             subtotal += subtotalProducto;
         });
         
-        const porcentajeIva = parseFloat(document.getElementById('porcentajeIva').value) / 100;
+        const porcentajeIvaEl = document.getElementById('porcentajeIva');
+        const porcentajeIva = porcentajeIvaEl ? parseFloat(porcentajeIvaEl.value) / 100 : 0.16;
         const iva = subtotal * porcentajeIva;
         const total = subtotal + iva;
         
-        document.getElementById('subtotalGeneral').textContent = '$' + subtotal.toFixed(2);
-        document.getElementById('ivaGeneral').textContent = '$' + iva.toFixed(2);
-        document.getElementById('totalGeneral').textContent = '$' + total.toFixed(2);
+        const subtotalEl = document.getElementById('subtotalGeneral');
+        const ivaEl = document.getElementById('ivaGeneral');
+        const totalEl = document.getElementById('totalGeneral');
+        
+        if (subtotalEl) subtotalEl.textContent = '$' + subtotal.toFixed(2);
+        if (ivaEl) ivaEl.textContent = '$' + iva.toFixed(2);
+        if (totalEl) totalEl.textContent = '$' + total.toFixed(2);
     }
     
     let detalleIdActual = null;
@@ -370,34 +604,62 @@
     calcularTotales();
     
     function confirmarCotizacion() {
-        // Validar que todos los campos requeridos estén llenos
+        // Validar que todos los campos requeridos estén llenos (excepto los que se surten desde almacén)
         const proveedores = document.querySelectorAll('.proveedor-select');
         const precios = document.querySelectorAll('.precio-cotizado');
         let valid = true;
+        let hayProductosACotizar = false;
+        let productosDesdeAlmacen = 0;
         
         proveedores.forEach(select => {
-            if (!select.value) {
+            // Solo validar si no está deshabilitado (no se surte desde almacén)
+            if (!select.disabled && !select.value) {
                 valid = false;
             }
         });
         
         precios.forEach(input => {
-            if (!input.value || parseFloat(input.value) <= 0) {
-                valid = false;
+            // Solo validar si no está deshabilitado (no se surte desde almacén)
+            if (!input.disabled) {
+                if (!input.value || parseFloat(input.value) <= 0) {
+                    valid = false;
+                }
+                hayProductosACotizar = true;
+            } else {
+                productosDesdeAlmacen++;
             }
         });
         
         if (!valid) {
-            alertaError('Por favor, completa todos los campos de proveedor y precio cotizado');
+            alertaError('Por favor, completa todos los campos de proveedor y precio cotizado para los productos que no se surten desde almacén');
             return;
         }
         
         const total = document.getElementById('totalGeneral').textContent;
         
+        // Construir mensaje con información de productos desde almacén
+        let mensajeHtml = `<p>Se enviará la cotización con un total de <strong>${total}</strong></p>`;
+        
+        if (productosDesdeAlmacen > 0) {
+            mensajeHtml += `<div style="background: #ecfdf5; border: 1px solid #10b981; border-radius: 8px; padding: 12px; margin: 15px 0; text-align: left;">
+                <p style="margin: 0; color: #065f46; font-weight: 600;">
+                    <i class="fas fa-warehouse"></i> ${productosDesdeAlmacen} producto(s) se surtirán desde almacén
+                </p>
+                <p style="margin: 5px 0 0 0; color: #047857; font-size: 13px;">
+                    Se registrará automáticamente la salida del inventario.
+                </p>
+            </div>`;
+        }
+        
+        if (hayProductosACotizar) {
+            mensajeHtml += `<p class="text-muted">Los demás productos serán enviados a Gerencia para su aprobación.</p>`;
+        } else {
+            mensajeHtml += `<p class="text-muted">Todos los productos se surtirán desde almacén. No hay monto a aprobar.</p>`;
+        }
+        
         Swal.fire({
             title: '¿Enviar cotización a Gerencia?',
-            html: `<p>Se enviará la cotización con un total de <strong>${total}</strong></p>
-                   <p class="text-muted">Esta acción notificará a Gerencia para su aprobación.</p>`,
+            html: mensajeHtml,
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#10b981',
@@ -467,30 +729,58 @@
                             $subtotalSinIva = 0;
                             $porcentajeIva = isset($requisicion['porcentaje_iva']) ? $requisicion['porcentaje_iva'] : 16;
                             foreach ($detalles as $detalle): 
-                                $precioCotizado = $detalle['precio_cotizado'] ?? 0;
+                                // Detectar si es surtido desde almacén por campo O por precio 0 sin proveedor
+                                $precioCotizadoOriginal = floatval($detalle['precio_cotizado'] ?? 0);
+                                $tieneProveedorG = !empty($detalle['proveedor_id']) || !empty($detalle['proveedor_nombre']);
+                                $surtidoAlmacen = (isset($detalle['surtido_almacen']) && $detalle['surtido_almacen'] == 1)
+                                    || ($precioCotizadoOriginal == 0 && !$tieneProveedorG && isset($detalle['aprobado']) && $detalle['aprobado'] == 1);
+                                // Si es surtido desde almacén, precio es 0
+                                $precioCotizado = $surtidoAlmacen ? 0 : $precioCotizadoOriginal;
                                 $subtotal = $precioCotizado * $detalle['cantidad'];
-                                if ($detalle['aprobado']) {
+                                // Solo sumar si está aprobado Y no es surtido desde almacén
+                                if ($detalle['aprobado'] && !$surtidoAlmacen) {
                                     $subtotalSinIva += $subtotal;
                                 }
                             ?>
-                            <tr class="<?php echo !$detalle['aprobado'] ? 'rechazado' : ''; ?>" style="border-bottom: 1px solid #e5e7eb; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f9fafb'" onmouseout="this.style.backgroundColor='white'">
+                            <tr class="<?php echo !$detalle['aprobado'] ? 'rechazado' : ''; ?>" style="border-bottom: 1px solid #e5e7eb; transition: background-color 0.2s; <?php echo $surtidoAlmacen ? 'background: #ecfdf5;' : ''; ?>" onmouseover="this.style.backgroundColor='<?php echo $surtidoAlmacen ? '#d1fae5' : '#f9fafb'; ?>'" onmouseout="this.style.backgroundColor='<?php echo $surtidoAlmacen ? '#ecfdf5' : 'white'; ?>'">
                                 <td class="text-center" style="padding: 16px;">
-                                    <input type="checkbox" 
-                                           class="articulo-check" 
-                                           name="articulos_aprobados[]" 
-                                           value="<?php echo $detalle['id']; ?>"
-                                           <?php echo $detalle['aprobado'] ? 'checked' : ''; ?>
-                                           style="width: 18px; height: 18px; cursor: pointer; accent-color: #2563eb;">
+                                    <?php if ($surtidoAlmacen): ?>
+                                        <span style="color: #10b981; font-size: 18px;" title="Surtido desde almacén">
+                                            <i class="fas fa-warehouse"></i>
+                                        </span>
+                                        <input type="hidden" name="articulos_aprobados[]" value="<?php echo $detalle['id']; ?>">
+                                    <?php else: ?>
+                                        <input type="checkbox" 
+                                               class="articulo-check" 
+                                               name="articulos_aprobados[]" 
+                                               value="<?php echo $detalle['id']; ?>"
+                                               <?php echo $detalle['aprobado'] ? 'checked' : ''; ?>
+                                               style="width: 18px; height: 18px; cursor: pointer; accent-color: #2563eb;">
+                                    <?php endif; ?>
                                 </td>
-                                <td style="color: #1f2937; padding: 16px; font-weight: 500;"><?php echo htmlspecialchars($detalle['producto_nombre']); ?></td>
+                                <td style="color: #1f2937; padding: 16px; font-weight: 500;">
+                                    <?php echo htmlspecialchars($detalle['producto_nombre']); ?>
+                                    <?php if ($surtidoAlmacen): ?>
+                                        <span style="display: inline-block; margin-left: 8px; background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;">
+                                            DESDE ALMACÉN
+                                        </span>
+                                    <?php endif; ?>
+                                </td>
                                 <td style="color: #1f2937; padding: 16px; text-align: center;">
-                                    <?php if (in_array($user['rol'], ['gerencia', 'gerencia_general']) && in_array($requisicion['estado'], ['en_gerencia', 'en_gerencia_general'])): ?>
+                                    <?php if ($surtidoAlmacen): ?>
+                                        <span style="color: #10b981; font-weight: 600;"><?php echo intval($detalle['cantidad']); ?></span>
+                                        <input type="hidden" name="cantidades[<?php echo $detalle['id']; ?>]" value="<?php echo intval($detalle['cantidad']); ?>">
+                                    <?php elseif (in_array($user['rol'], ['gerencia', 'gerencia_general']) && in_array($requisicion['estado'], ['en_gerencia', 'en_gerencia_general'])): ?>
                                         <input type="number" 
                                                step="1" 
                                                class="form-control form-control-sm cantidad-input" 
                                                name="cantidades[<?php echo $detalle['id']; ?>]" 
                                                value="<?php echo intval($detalle['cantidad']); ?>"
                                                min="1"
+                                               data-precio="<?php echo $precioCotizado; ?>"
+                                               data-detalle-id="<?php echo $detalle['id']; ?>"
+                                               onchange="actualizarSubtotalArticulo(this)"
+                                               oninput="actualizarSubtotalArticulo(this)"
                                                style="background: white; border: 2px solid #e5e7eb; color: #1f2937; padding: 8px 12px; border-radius: 8px; width: 100px; transition: border-color 0.2s;" 
                                                onfocus="this.style.borderColor='#2563eb'" 
                                                onblur="this.style.borderColor='#e2e8f0'">
@@ -499,9 +789,29 @@
                                     <?php endif; ?>
                                 </td>
                                 <td style="color: #6b7280; padding: 16px; text-align: center;"><?php echo htmlspecialchars($detalle['unidad']); ?></td>
-                                <td style="color: #6b7280; padding: 16px;"><?php echo htmlspecialchars($detalle['proveedor_nombre'] ?? ''); ?></td>
-                                <td style="color: #1f2937; padding: 16px; font-weight: 500; text-align: right;">$<?php echo number_format($precioCotizado, 2); ?></td>
-                                <td style="color: #2563eb; padding: 16px; font-weight: 600; text-align: right;">$<?php echo number_format($subtotal, 2); ?></td>
+                                <td style="color: #6b7280; padding: 16px;">
+                                    <?php if ($surtidoAlmacen): ?>
+                                        <span style="display: inline-flex; align-items: center; gap: 6px; background: #d1fae5; color: #065f46; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;">
+                                            <i class="fas fa-warehouse" style="font-size: 11px;"></i> Almacen
+                                        </span>
+                                    <?php else: ?>
+                                        <?php echo htmlspecialchars($detalle['proveedor_nombre'] ?? 'Sin proveedor'); ?>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="color: #1f2937; padding: 16px; font-weight: 500; text-align: right;">
+                                    <?php if ($surtidoAlmacen): ?>
+                                        <span style="color: #10b981; font-weight: 600;">$0.00</span>
+                                    <?php else: ?>
+                                        <span class="precio-unitario" data-precio="<?php echo $precioCotizado; ?>">$<?php echo number_format($precioCotizado, 2); ?></span>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="padding: 16px; font-weight: 600; text-align: right;">
+                                    <?php if ($surtidoAlmacen): ?>
+                                        <span style="color: #10b981;">$0.00</span>
+                                    <?php else: ?>
+                                        <span class="subtotal-articulo" data-detalle-id="<?php echo $detalle['id']; ?>" style="color: #2563eb;">$<?php echo number_format($subtotal, 2); ?></span>
+                                    <?php endif; ?>
+                                </td>
                                 <td style="padding: 16px;">
                                     <input type="text" 
                                            class="form-control form-control-sm justificacion-articulo" 
@@ -523,22 +833,21 @@
                             <!-- Fila de Subtotal -->
                             <tr style="background: #f9fafb; border-top: 1px solid #e5e7eb;">
                                 <td colspan="6" class="text-right" style="color: #6b7280; font-weight: 600; padding: 16px; font-size: 14px;">Subtotal (Sin IVA):</td>
-                                <td colspan="2" style="padding: 16px; text-align: right;"><strong style="color: #1f2937; font-size: 18px;">$<?php echo number_format($subtotalSinIva, 2); ?></strong></td>
+                                <td colspan="2" style="padding: 16px; text-align: right;"><strong id="subtotalGerencia" style="color: #1f2937; font-size: 18px;">$<?php echo number_format($subtotalSinIva, 2); ?></strong></td>
                             </tr>
                             
                             <!-- Fila de IVA -->
                             <tr style="background: #f9fafb;">
                                 <td colspan="6" class="text-right" style="color: #6b7280; font-weight: 600; padding: 16px; font-size: 14px;">
-                                    <!-- Mostrar el porcentaje correcto de IVA -->
-                                    IVA (<?php echo number_format($porcentajeIva, 0); ?>%):
+                                    IVA (<span id="porcentajeIvaGerencia"><?php echo number_format($porcentajeIva, 0); ?></span>%):
                                 </td>
-                                <td colspan="2" style="padding: 16px; text-align: right;"><strong style="color: #1f2937; font-size: 18px;">$<?php echo number_format($ivaCalculado, 2); ?></strong></td>
+                                <td colspan="2" style="padding: 16px; text-align: right;"><strong id="ivaGerencia" style="color: #1f2937; font-size: 18px;">$<?php echo number_format($ivaCalculado, 2); ?></strong></td>
                             </tr>
                             
                             <!-- Fila de Total -->
                             <tr class="total-row" style="background: var(--gray-50); border-top: 2px solid #2563eb;">
                                 <td colspan="6" class="text-right" style="color: #1f2937; font-weight: 700; padding: 20px; font-size: 16px;"><strong>Total con IVA:</strong></td>
-                                <td colspan="2" style="padding: 20px; text-align: right;"><strong style="color: #2563eb; font-size: 24px; font-weight: 700;">$<?php echo number_format($totalConIva, 2); ?></strong></td>
+                                <td colspan="2" style="padding: 20px; text-align: right;"><strong id="totalGerencia" style="color: #2563eb; font-size: 24px; font-weight: 700;">$<?php echo number_format($totalConIva, 2); ?></strong></td>
                             </tr>
                         </tbody>
                     </table>
@@ -571,6 +880,59 @@
     </div>
     
     <script>
+    // Función para actualizar el subtotal cuando cambia la cantidad
+    function actualizarSubtotalArticulo(input) {
+        const precio = parseFloat(input.dataset.precio) || 0;
+        const cantidad = parseInt(input.value) || 0;
+        const detalleId = input.dataset.detalleId;
+        const subtotal = precio * cantidad;
+        
+        // Actualizar el subtotal del artículo
+        const subtotalSpan = document.querySelector(`.subtotal-articulo[data-detalle-id="${detalleId}"]`);
+        if (subtotalSpan) {
+            subtotalSpan.textContent = '$' + subtotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+        
+        // Recalcular totales generales
+        recalcularTotalesGerencia();
+    }
+    
+    // Función para recalcular totales de gerencia
+    function recalcularTotalesGerencia() {
+        let subtotalGeneral = 0;
+        const porcentajeIva = parseFloat(document.getElementById('porcentajeIvaGerencia')?.textContent) || 16;
+        
+        // Sumar todos los subtotales de artículos aprobados (checkbox marcado)
+        document.querySelectorAll('.articulo-check').forEach(checkbox => {
+            if (checkbox.checked) {
+                const row = checkbox.closest('tr');
+                const cantidadInput = row.querySelector('.cantidad-input');
+                if (cantidadInput) {
+                    const precio = parseFloat(cantidadInput.dataset.precio) || 0;
+                    const cantidad = parseInt(cantidadInput.value) || 0;
+                    subtotalGeneral += precio * cantidad;
+                }
+            }
+        });
+        
+        const iva = subtotalGeneral * (porcentajeIva / 100);
+        const total = subtotalGeneral + iva;
+        
+        // Actualizar los elementos del DOM
+        const subtotalEl = document.getElementById('subtotalGerencia');
+        const ivaEl = document.getElementById('ivaGerencia');
+        const totalEl = document.getElementById('totalGerencia');
+        
+        if (subtotalEl) subtotalEl.textContent = '$' + subtotalGeneral.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        if (ivaEl) ivaEl.textContent = '$' + iva.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        if (totalEl) totalEl.textContent = '$' + total.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+    
+    // Recalcular totales cuando se marca/desmarca un checkbox
+    document.querySelectorAll('.articulo-check').forEach(checkbox => {
+        checkbox.addEventListener('change', recalcularTotalesGerencia);
+    });
+    
     // Validar que si desmarca un artículo, debe proporcionar justificación
     document.getElementById('formAprobar').addEventListener('submit', function(e) {
         const accion = e.submitter.value;
@@ -606,11 +968,15 @@
                 return false;
             }
             
-            // Verificar que al menos un artículo esté aprobado
-            const algnoAprobado = Array.from(document.querySelectorAll('.articulo-check'))
-                .some(cb => cb.checked);
+            // Verificar que al menos un artículo esté aprobado O haya productos de almacén
+            const checkboxes = document.querySelectorAll('.articulo-check');
+            const algnoAprobado = Array.from(checkboxes).some(cb => cb.checked);
+            const hayProductosAlmacen = document.querySelectorAll('.badge-almacen, [data-almacen="true"]').length > 0 || 
+                                        document.querySelectorAll('tr .fa-warehouse').length > 0;
+            const todosDeAlmacen = checkboxes.length === 0;
             
-            if (!algnoAprobado) {
+            // Permitir aprobar si: hay al menos uno aprobado, o todos son de almacén, o hay productos de almacén
+            if (!algnoAprobado && !todosDeAlmacen && !hayProductosAlmacen) {
                 e.preventDefault();
                 alert('Debe aprobar al menos un artículo o rechazar la requisición completa');
                 return false;
@@ -620,8 +986,13 @@
     
     function confirmarAprobacion() {
         const articulosAprobados = document.querySelectorAll('input[name="articulos_aprobados[]"]:checked');
+        const checkboxes = document.querySelectorAll('.articulo-check');
+        const todosDeAlmacen = checkboxes.length === 0;
+        const hayProductosAlmacen = document.querySelectorAll('.badge-almacen, [data-almacen="true"]').length > 0 ||
+                                    document.querySelectorAll('tr .fa-warehouse').length > 0;
         
-        if (articulosAprobados.length === 0) {
+        // Permitir si hay al menos uno aprobado, o todos son de almacén, o hay productos de almacén
+        if (articulosAprobados.length === 0 && !todosDeAlmacen && !hayProductosAlmacen) {
             alertaError('Debes aprobar al menos un artículo');
             return;
         }
@@ -629,10 +1000,22 @@
         const accion = <?php echo $user['rol'] === 'gerencia' ? '"enviar a Gerencia Administrativa"' : '"aprobar la requisición"'; ?>;
         const titulo = <?php echo $user['rol'] === 'gerencia' ? '"¿Enviar a Gerencia Administrativa?"' : '"¿Aprobar Requisición?"'; ?>;
         
+        // Contar productos de almacén (iconos de almacén sin checkbox)
+        const productosAlmacen = document.querySelectorAll('tr .fa-warehouse').length / 2; // Dividir porque hay 2 iconos por fila de almacén
+        const totalProductos = articulosAprobados.length + (todosDeAlmacen ? document.querySelectorAll('tbody tr').length : 0);
+        
+        let mensaje = '';
+        if (todosDeAlmacen) {
+            mensaje = `<p>Todos los productos serán surtidos desde <strong>Almacén</strong>.</p>
+                       <p class="text-muted">Esta acción notificará al siguiente nivel.</p>`;
+        } else {
+            mensaje = `<p>Has seleccionado <strong>${articulosAprobados.length}</strong> artículos para aprobar.</p>
+                       <p class="text-muted">Esta acción notificará al siguiente nivel.</p>`;
+        }
+        
         Swal.fire({
             title: titulo,
-            html: `<p>Has seleccionado <strong>${articulosAprobados.length}</strong> artículos para aprobar.</p>
-                   <p class="text-muted">Esta acción notificará al siguiente nivel.</p>`,
+            html: mensaje,
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#10b981',
@@ -714,40 +1097,67 @@
                             : 0.16;
                         
                         foreach ($detalles as $detalle): 
-                            // Usar precio_cotizado si existe, si no usar precio_unitario del inventario
-                            $precioUnitario = floatval($detalle['precio_cotizado'] ?? $detalle['precio_unitario'] ?? 0);
-                            $cantidad = floatval($detalle['cantidad']);
-                            $subtotal = $precioUnitario * $cantidad;
+                            // Verificar si fue surtido desde almacén
+                            // Detectar por campo surtido_almacen = 1 O por precio 0 sin proveedor (datos antiguos)
+                            $precioCot = floatval($detalle['precio_cotizado'] ?? 0);
+                            $tieneProveedor = !empty($detalle['proveedor_id']) || !empty($detalle['proveedor_nombre']);
+                            $surtidoDesdeAlmacen = (isset($detalle['surtido_almacen']) && $detalle['surtido_almacen'] == 1) 
+                                || ($precioCot == 0 && !$tieneProveedor && isset($detalle['aprobado']) && $detalle['aprobado'] == 1);
                             
-                            // Solo sumar al total si está aprobado o si no hay campo 'aprobado' (para estados anteriores a la aprobación)
-                            if (!isset($detalle['aprobado']) || $detalle['aprobado']) {
+                            // Si fue surtido desde almacén, el precio es 0
+                            if ($surtidoDesdeAlmacen) {
+                                $precioUnitario = 0;
+                                $subtotal = 0;
+                            } else {
+                                $precioUnitario = floatval($detalle['precio_cotizado'] ?? $detalle['precio_unitario'] ?? 0);
+                                $cantidad = floatval($detalle['cantidad']);
+                                $subtotal = $precioUnitario * $cantidad;
+                            }
+                            
+                            // Solo sumar al total si está aprobado Y no fue surtido desde almacén
+                            if ((!isset($detalle['aprobado']) || $detalle['aprobado']) && !$surtidoDesdeAlmacen) {
                                 $subtotalGeneral += $subtotal;
                             }
                         ?>
-                        <tr style="border-bottom: 1px solid #e5e7eb; transition: background-color 0.2s ease;" 
-                            onmouseover="this.style.backgroundColor='#f8fafc'" 
-                            onmouseout="this.style.backgroundColor='white'">
+                        <tr style="border-bottom: 1px solid #e5e7eb; transition: background-color 0.2s ease; <?php echo $surtidoDesdeAlmacen ? 'background: #ecfdf5;' : ''; ?>" 
+                            onmouseover="this.style.backgroundColor='<?php echo $surtidoDesdeAlmacen ? '#d1fae5' : '#f8fafc'; ?>'" 
+                            onmouseout="this.style.backgroundColor='<?php echo $surtidoDesdeAlmacen ? '#ecfdf5' : 'white'; ?>'">
                             <td style="padding: 18px 20px; color: #1f2937; font-weight: 500; font-size: 15px;">
                                 <?php echo htmlspecialchars($detalle['producto_nombre']); ?>
+                                <?php if ($surtidoDesdeAlmacen): ?>
+                                    <span style="display: inline-block; margin-left: 8px; background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;">
+                                        <i class="fas fa-warehouse"></i> DESDE ALMACEN
+                                    </span>
+                                <?php endif; ?>
                             </td>
-                            <td style="padding: 18px 20px; text-align: center; color: #1f2937; font-weight: 600; font-size: 15px;">
+                            <td style="padding: 18px 20px; text-align: center; color: <?php echo $surtidoDesdeAlmacen ? '#10b981' : '#1f2937'; ?>; font-weight: 600; font-size: 15px;">
                                 <?php echo $detalle['cantidad']; ?>
                             </td>
                             <td style="padding: 18px 20px; text-align: center; color: #64748b; font-size: 14px;">
                                 <?php echo htmlspecialchars($detalle['unidad']); ?>
                             </td>
-                            <td style="padding: 18px 20px; color: #1f2937; font-size: 15px;">
-                                <?php echo htmlspecialchars($detalle['proveedor_nombre'] ?? 'No especificado'); ?>
+                            <td style="padding: 18px 20px; font-size: 15px;">
+                                <?php if ($surtidoDesdeAlmacen): ?>
+                                    <span style="display: inline-flex; align-items: center; gap: 6px; background: #d1fae5; color: #065f46; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 13px;">
+                                        <i class="fas fa-warehouse"></i> Almacen
+                                    </span>
+                                <?php else: ?>
+                                    <span style="color: #1f2937;"><?php echo htmlspecialchars($detalle['proveedor_nombre'] ?? 'No especificado'); ?></span>
+                                <?php endif; ?>
                             </td>
-                            <td style="padding: 18px 20px; text-align: right; color: #1f2937; font-weight: 600; font-size: 15px;">
-                                $<?php echo number_format($precioUnitario, 2); ?>
+                            <td style="padding: 18px 20px; text-align: right; font-weight: 600; font-size: 15px; color: <?php echo $surtidoDesdeAlmacen ? '#10b981' : '#1f2937'; ?>;">
+                                <?php echo $surtidoDesdeAlmacen ? '$0.00' : '$' . number_format($precioUnitario, 2); ?>
                             </td>
-                            <td style="padding: 18px 20px; text-align: right; color: #2563eb; font-weight: 700; font-size: 16px;">
-                                $<?php echo number_format($subtotal, 2); ?>
+                            <td style="padding: 18px 20px; text-align: right; font-weight: 700; font-size: 16px; color: <?php echo $surtidoDesdeAlmacen ? '#10b981' : '#2563eb'; ?>;">
+                                <?php echo $surtidoDesdeAlmacen ? '$0.00' : '$' . number_format($subtotal, 2); ?>
                             </td>
                             <?php if (in_array($requisicion['estado'], ['aprobada', 'completada', 'rechazada'])): ?>
                             <td style="padding: 18px 20px; text-align: center;">
-                                <?php if ($detalle['aprobado']): ?>
+                                <?php if ($surtidoDesdeAlmacen): ?>
+                                    <span style="background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 999px; font-weight: 600; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.5px; display: inline-block;">
+                                        <i class="fas fa-warehouse" style="margin-right: 4px;"></i>Almacén
+                                    </span>
+                                <?php elseif ($detalle['aprobado']): ?>
                                     <span style="background: var(--success-light); color: var(--success); padding: 4px 12px; border-radius: 999px; font-weight: 600; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.5px; display: inline-block;">
                                         <i class="fas fa-check-circle" style="margin-right: 4px;"></i>Aprobado
                                     </span>
@@ -805,19 +1215,139 @@
     </div>
     <?php endif; ?>
     
-    <!-- Punto 24: Agregar botón de imprimir para compras -->
-    <?php if ($user['rol'] === 'compras' && in_array($requisicion['estado'], ['aprobada', 'completada'])): ?>
-        <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
-            <a href="imprimir-requisiciones.php?id=<?php echo $requisicion['id']; ?>" 
+  <!-- Botones de impresión para compras -->
+  <?php if ($user['rol'] === 'compras' && in_array($requisicion['estado'], ['aprobada', 'completada'])): ?>
+  <?php 
+    // Verificar si hay productos surtidos desde almacén y productos para orden de compra
+    $tieneProductosAlmacen = false;
+    $tieneProductosCompra = false;
+    foreach ($detalles as $det) {
+        // Detectar si es de almacén por campo O por precio 0 sin proveedor
+        $precioDetB = floatval($det['precio_cotizado'] ?? 0);
+        $tieneProvB = !empty($det['proveedor_id']) || !empty($det['proveedor_nombre']);
+        $esDeAlmacen = (isset($det['surtido_almacen']) && $det['surtido_almacen'] == 1)
+            || ($precioDetB == 0 && !$tieneProvB && isset($det['aprobado']) && $det['aprobado'] == 1);
+        
+        if ($esDeAlmacen) {
+            $tieneProductosAlmacen = true;
+        } else if ($det['aprobado']) {
+            $tieneProductosCompra = true;
+        }
+    }
+  ?>
+  <div style="display: flex; justify-content: flex-end; margin-top: 20px; gap: 12px; flex-wrap: wrap;">
+    <?php if ($tieneProductosAlmacen): ?>
+        <?php 
+        // Verificar si ya fue procesada la salida
+        $salidaProcesada = isset($requisicion['salida_almacen_procesada']) && $requisicion['salida_almacen_procesada'] == 1;
+        ?>
+        <?php if ($salidaProcesada): ?>
+            <!-- Ya fue procesada - Solo reimprimir -->
+            <a href="imprimir-salida-almacen-requisicion.php?id=<?php echo $requisicion['id']; ?>"
                target="_blank"
-               style="background: #2563eb; color: white; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); transition: all 0.2s;"
-               onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(37, 99, 235, 0.4)';"
-               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(37, 99, 235, 0.3)';">
-                <i class="fas fa-print"></i> Imprimir Orden de Compra
+               style="background: #6b7280; color: white; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3); transition: all 0.2s;"
+               onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(107, 114, 128, 0.4)';"
+               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(107, 114, 128, 0.3)';">
+               <i class="fas fa-print"></i> Reimprimir Salida de Almacen
             </a>
-        </div>
+            <span style="background: #d1fae5; color: #065f46; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
+               <i class="fas fa-check-circle"></i> Salida ya procesada
+               <?php if (!empty($requisicion['folio_salida_almacen'])): ?>
+               (<?php echo htmlspecialchars($requisicion['folio_salida_almacen']); ?>)
+               <?php endif; ?>
+            </span>
+        <?php else: ?>
+            <!-- Primera vez - Procesar y generar salida -->
+            <a href="#" onclick="confirmarSalidaAlmacen(<?php echo $requisicion['id']; ?>); return false;"
+               style="background: #10b981; color: white; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); transition: all 0.2s; cursor: pointer;"
+               onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(16, 185, 129, 0.4)';"
+               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.3)';">
+               <i class="fas fa-warehouse"></i> Procesar y Generar Salida de Almacen
+            </a>
+            <span style="background: #fef3c7; color: #92400e; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
+               <i class="fas fa-exclamation-triangle"></i> Se descontara del inventario
+            </span>
+        <?php endif; ?>
     <?php endif; ?>
+    
+    <?php if ($tieneProductosCompra): ?>
+    <a href="imprimir-requisiciones.php?id=<?php echo $requisicion['id']; ?>"
+       target="_blank"
+       style="background: #2563eb; color: white; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); transition: all 0.2s;"
+       onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(37, 99, 235, 0.4)';"
+       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(37, 99, 235, 0.3)';">
+       <i class="fas fa-print"></i> Imprimir Orden de Compra
+    </a>
+    <?php endif; ?>
+    
+    <?php if (!$tieneProductosCompra && $tieneProductosAlmacen): ?>
+    <span style="background: #f3f4f6; color: #6b7280; padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px;">
+       <i class="fas fa-info-circle"></i> Todos los productos fueron surtidos desde almacen
+    </span>
+    <?php endif; ?>
+  </div>
+  <?php endif; ?>
 
 </main>
+
+<!-- Modal de confirmación de salida de almacén -->
+<div id="modalConfirmarSalida" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
+    <div style="background: white; border-radius: 16px; padding: 32px; max-width: 480px; width: 90%; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
+        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 36px; color: #d97706;"></i>
+        </div>
+        <h3 style="color: #1f2937; font-size: 22px; font-weight: 700; margin-bottom: 12px;">Confirmar Salida de Almacen</h3>
+        <p style="color: #6b7280; font-size: 15px; line-height: 1.6; margin-bottom: 8px;">
+            Esta accion <strong style="color: #dc2626;">descontara los productos del inventario</strong>.
+        </p>
+        <p style="color: #6b7280; font-size: 14px; margin-bottom: 24px;">
+            Una vez procesada, podras reimprimir el documento sin afectar el inventario nuevamente.
+        </p>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+            <button onclick="ejecutarSalidaAlmacen()" style="background: #10b981; color: white; border: none; padding: 14px 28px; border-radius: 10px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-size: 15px;">
+                <i class="fas fa-check"></i> Si, procesar salida
+            </button>
+            <button onclick="cerrarModalSalida()" style="background: #f3f4f6; color: #374151; border: none; padding: 14px 28px; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 15px;">
+                Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+var requisicionIdSalida = null;
+
+function confirmarSalidaAlmacen(id) {
+    requisicionIdSalida = id;
+    document.getElementById('modalConfirmarSalida').style.display = 'flex';
+}
+
+function cerrarModalSalida() {
+    document.getElementById('modalConfirmarSalida').style.display = 'none';
+    requisicionIdSalida = null;
+}
+
+function ejecutarSalidaAlmacen() {
+    if (requisicionIdSalida) {
+        // Abrir el procesamiento en nueva pestaña
+        window.open('procesar-salida-almacen.php?id=' + requisicionIdSalida, '_blank');
+        
+        // Cerrar el modal
+        cerrarModalSalida();
+        
+        // Recargar la pagina actual despues de un breve delay para que se procese
+        setTimeout(function() {
+            window.location.reload();
+        }, 1500);
+    }
+}
+
+// Cerrar modal al hacer clic fuera
+document.getElementById('modalConfirmarSalida').addEventListener('click', function(e) {
+    if (e.target === this) {
+        cerrarModalSalida();
+    }
+});
+</script>
 
 <?php require 'includes/footer.php'; ?>

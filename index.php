@@ -6,7 +6,7 @@ $authController->checkPermission();
 
 $user = $authController->getCurrentUser();
 
-if ($user && $user['rol'] === 'departamento') {
+if ($user['rol'] === 'departamento') {
     header('Location: requisiciones.php');
     exit;
 }

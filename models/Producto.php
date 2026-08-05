@@ -228,13 +228,13 @@ class Producto {
         
         $where_clause = " WHERE sub_almacen_id = 100";
         
-        $sql = "SELECT COUNT(*) as total, 
+        $sql = "SELECT SUM(cantidad) as total_cantidad, 
                 SUM(cantidad * precio_unitario) as valor_total,
                 SUM(CASE WHEN cantidad <= stock_minimo THEN 1 ELSE 0 END) as bajo_stock
                 FROM inventario" . $where_clause;
         $result = $this->conn->query($sql);
         if ($row = $result->fetch_assoc()) {
-            $stats['total_productos'] = $row['total'];
+            $stats['total_productos'] = $row['total_cantidad'] ?? 0;
             $stats['valor_total'] = $row['valor_total'] ?? 0;
             $stats['productos_bajo_stock'] = $row['bajo_stock'];
         }

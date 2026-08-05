@@ -22,20 +22,27 @@
         <form method="POST" action="nueva-salida.php" id="formNuevaSalida" onsubmit="return confirmarSalida(event)">
             
             <!-- Datos generales -->
+            <?php 
+            // Buscar el ID del Almacén General
+            $almacen_general_id = 1;
+            foreach ($sub_almacenes as $almacen) {
+                if (stripos($almacen['nombre'], 'general') !== false) {
+                    $almacen_general_id = $almacen['id'];
+                    break;
+                }
+            }
+            ?>
+            <input type="hidden" id="sub_almacen_id" name="sub_almacen_id" value="<?php echo $almacen_general_id; ?>">
+            
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--gray-100);">
-                <?php if ($user['rol'] === 'admin' || $user['rol'] === 'compras'): ?>
-                    <div>
-                        <label style="display: flex; align-items: center; gap: 6px; color: var(--gray-700); font-weight: 600; margin-bottom: 6px; font-size: 0.8125rem;">
-                            <i class="fas fa-warehouse" style="color: var(--primary); font-size: 0.75rem;"></i> Sub-Almacen <span style="color: var(--danger);">*</span>
-                        </label>
-                        <select id="sub_almacen_id" name="sub_almacen_id" required class="form-input" onchange="filtrarProductosPorAlmacen()">
-                            <option value="">Seleccionar...</option>
-                            <?php foreach ($sub_almacenes as $almacen): ?>
-                                <option value="<?php echo $almacen['id']; ?>"><?php echo htmlspecialchars($almacen['nombre']); ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                <div>
+                    <label style="display: flex; align-items: center; gap: 6px; color: var(--gray-700); font-weight: 600; margin-bottom: 6px; font-size: 0.8125rem;">
+                        <i class="fas fa-warehouse" style="color: var(--primary); font-size: 0.75rem;"></i> Almacen
+                    </label>
+                    <div style="padding: 10px 14px; background: linear-gradient(135deg, #dbeafe, #eff6ff); border: 2px solid #3b82f6; border-radius: 8px; color: #1e40af; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-check-circle"></i> Almacen General
                     </div>
-                <?php endif; ?>
+                </div>
                 
                 <div>
                     <label style="display: flex; align-items: center; gap: 6px; color: var(--gray-700); font-weight: 600; margin-bottom: 6px; font-size: 0.8125rem;">
@@ -72,7 +79,7 @@
                 
                 <div id="productos-container">
                     <!-- Producto inicial -->
-                    <div class="producto-salida-item" data-index="1" style="display: grid; grid-template-columns: 2fr 120px 40px; gap: 0.75rem; align-items: end; padding: 1rem; background: var(--gray-50); border-radius: 8px; margin-bottom: 0.5rem;">
+                    <div class="producto-salida-item" data-index="1" style="display: grid; grid-template-columns: 1fr 180px 40px; gap: 0.75rem; align-items: end; padding: 1rem; background: var(--gray-50); border-radius: 8px; margin-bottom: 0.5rem;">
                         <div>
                             <label style="font-size: 0.75rem; color: var(--gray-600); font-weight: 600; margin-bottom: 4px; display: block;">Producto</label>
                             <select name="productos_ids[]" class="form-input producto-select" required onchange="actualizarStock(this)">
@@ -82,14 +89,19 @@
                                             data-stock="<?php echo intval($prod['cantidad']); ?>"
                                             data-unidad="<?php echo htmlspecialchars($prod['unidad'] ?? ''); ?>"
                                             data-almacen="<?php echo $prod['sub_almacen_id']; ?>">
-                                        <?php echo htmlspecialchars($prod['nombre']); ?> (Stock: <?php echo $prod['cantidad']; ?> <?php echo $prod['unidad']; ?>)
+                                        <?php echo htmlspecialchars($prod['nombre']); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div>
-                            <label style="font-size: 0.75rem; color: var(--gray-600); font-weight: 600; margin-bottom: 4px; display: block;">Cantidad</label>
-                            <input type="number" name="cantidades[]" min="1" class="form-input cantidad-input" required placeholder="0" style="text-align: center; font-weight: 600;">
+                        <div style="display: flex; gap: 8px; align-items: end;">
+                            <div style="flex: 1;">
+                                <label style="font-size: 0.75rem; color: var(--gray-600); font-weight: 600; margin-bottom: 4px; display: block;">Cantidad</label>
+                                <input type="number" name="cantidades[]" min="1" class="form-input cantidad-input" required placeholder="0" style="text-align: center; font-weight: 600;">
+                            </div>
+                            <div class="stock-badge" style="padding: 8px 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; color: #166534; font-size: 0.75rem; font-weight: 600; white-space: nowrap; height: 38px; display: flex; align-items: center; gap: 4px;">
+                                <i class="fas fa-box"></i> <span class="stock-num">--</span>
+                            </div>
                         </div>
                         <div style="padding-bottom: 2px;">
                             <button type="button" onclick="this.closest('.producto-salida-item').remove(); actualizarIndices();" class="btn btn-sm" style="background: #fee2e2; color: #dc2626; border: none; width: 36px; height: 36px; padding: 0; border-radius: 8px;">
@@ -130,20 +142,25 @@ function agregarProducto() {
     var div = document.createElement('div');
     div.className = 'producto-salida-item';
     div.setAttribute('data-index', contadorProductos);
-    div.style.cssText = 'display: grid; grid-template-columns: 2fr 120px 40px; gap: 0.75rem; align-items: end; padding: 1rem; background: var(--gray-50); border-radius: 8px; margin-bottom: 0.5rem;';
+    div.style.cssText = 'display: grid; grid-template-columns: 1fr 180px 40px; gap: 0.75rem; align-items: end; padding: 1rem; background: var(--gray-50); border-radius: 8px; margin-bottom: 0.5rem;';
     
     var optionsHtml = '<option value="">Seleccionar producto...</option>';
     productosData.forEach(function(p) {
-        optionsHtml += '<option value="' + p.id + '" data-stock="' + p.cantidad + '" data-unidad="' + (p.unidad || '') + '" data-almacen="' + p.sub_almacen_id + '">' + p.nombre + ' (Stock: ' + p.cantidad + ' ' + (p.unidad || '') + ')</option>';
+        optionsHtml += '<option value="' + p.id + '" data-stock="' + p.cantidad + '" data-unidad="' + (p.unidad || '') + '" data-almacen="' + p.sub_almacen_id + '">' + p.nombre + '</option>';
     });
     
     div.innerHTML = '<div>' +
         '<label style="font-size: 0.75rem; color: var(--gray-600); font-weight: 600; margin-bottom: 4px; display: block;">Producto</label>' +
         '<select name="productos_ids[]" class="form-input producto-select" required onchange="actualizarStock(this)">' + optionsHtml + '</select>' +
         '</div>' +
-        '<div>' +
+        '<div style="display: flex; gap: 8px; align-items: end;">' +
+        '<div style="flex: 1;">' +
         '<label style="font-size: 0.75rem; color: var(--gray-600); font-weight: 600; margin-bottom: 4px; display: block;">Cantidad</label>' +
         '<input type="number" name="cantidades[]" min="1" class="form-input cantidad-input" required placeholder="0" style="text-align: center; font-weight: 600;">' +
+        '</div>' +
+        '<div class="stock-badge" style="padding: 8px 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; color: #166534; font-size: 0.75rem; font-weight: 600; white-space: nowrap; height: 38px; display: flex; align-items: center; gap: 4px;">' +
+        '<i class="fas fa-box"></i> <span class="stock-num">--</span>' +
+        '</div>' +
         '</div>' +
         '<div style="padding-bottom: 2px;">' +
         '<button type="button" onclick="this.closest(\'.producto-salida-item\').remove(); actualizarIndices();" class="btn btn-sm" style="background: #fee2e2; color: #dc2626; border: none; width: 36px; height: 36px; padding: 0; border-radius: 8px;"><i class="fas fa-trash"></i></button>' +
@@ -156,15 +173,41 @@ function agregarProducto() {
 function actualizarStock(selectElem) {
     var selected = selectElem.options[selectElem.selectedIndex];
     var stock = parseInt(selected.getAttribute('data-stock')) || 0;
-    var cantidadInput = selectElem.closest('.producto-salida-item').querySelector('.cantidad-input');
+    var unidad = selected.getAttribute('data-unidad') || 'pz';
+    var item = selectElem.closest('.producto-salida-item');
+    var cantidadInput = item.querySelector('.cantidad-input');
+    var stockBadge = item.querySelector('.stock-badge');
+    var stockNum = item.querySelector('.stock-num');
+    
     cantidadInput.max = stock;
     
-    if (stock <= 0 && selectElem.value) {
-        cantidadInput.disabled = true;
-        cantidadInput.placeholder = 'Sin stock';
+    // Actualizar badge de stock
+    if (selectElem.value) {
+        stockNum.textContent = stock + ' ' + unidad;
+        if (stock <= 0) {
+            stockBadge.style.background = '#fef2f2';
+            stockBadge.style.borderColor = '#fecaca';
+            stockBadge.style.color = '#991b1b';
+            cantidadInput.disabled = true;
+            cantidadInput.placeholder = 'Sin stock';
+        } else if (stock < 5) {
+            stockBadge.style.background = '#fffbeb';
+            stockBadge.style.borderColor = '#fde68a';
+            stockBadge.style.color = '#92400e';
+            cantidadInput.disabled = false;
+            cantidadInput.placeholder = '0';
+        } else {
+            stockBadge.style.background = '#f0fdf4';
+            stockBadge.style.borderColor = '#bbf7d0';
+            stockBadge.style.color = '#166534';
+            cantidadInput.disabled = false;
+            cantidadInput.placeholder = '0';
+        }
     } else {
-        cantidadInput.disabled = false;
-        cantidadInput.placeholder = '0';
+        stockNum.textContent = '--';
+        stockBadge.style.background = '#f0fdf4';
+        stockBadge.style.borderColor = '#bbf7d0';
+        stockBadge.style.color = '#166534';
     }
 }
 

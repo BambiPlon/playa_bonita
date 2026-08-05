@@ -77,7 +77,21 @@
                 </select>
             </div>
             
-            <?php if ($estado_filter || $mes_filter): ?>
+            <?php if (!empty($usuarios_filtro)): ?>
+            <div style="min-width: 180px; flex: 1.2;">
+                <label style="display: block; margin-bottom: 4px; color: var(--text-muted); font-weight: 600; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.5px;">Solicitante</label>
+                <select name="usuario" id="usuario" onchange="this.form.submit()" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--gray-200); border-radius: var(--radius-md); font-size: 0.8125rem; background: white; color: var(--text-primary); height: 38px; cursor: pointer;">
+                    <option value="">Todos</option>
+                    <?php foreach ($usuarios_filtro as $usr): ?>
+                        <option value="<?php echo $usr['id']; ?>" <?php echo ($usuario_filter == $usr['id']) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($usr['nombre_completo']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <?php endif; ?>
+            
+            <?php if ($estado_filter || $mes_filter || $usuario_filter): ?>
                 <a href="requisiciones.php" class="btn btn-secondary" style="height: 38px; display: flex; align-items: center;">
                     <i class="fas fa-times"></i> Limpiar
                 </a>
@@ -90,6 +104,7 @@
                 <?php if ($mes_filter): ?><input type="hidden" name="mes" value="<?php echo htmlspecialchars($mes_filter); ?>"><?php endif; ?>
                 <?php if ($anio_filter): ?><input type="hidden" name="anio" value="<?php echo htmlspecialchars($anio_filter); ?>"><?php endif; ?>
                 <?php if ($estado_filter): ?><input type="hidden" name="estado" value="<?php echo htmlspecialchars($estado_filter); ?>"><?php endif; ?>
+                <?php if ($usuario_filter): ?><input type="hidden" name="usuario" value="<?php echo htmlspecialchars($usuario_filter); ?>"><?php endif; ?>
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-muted); font-size: 0.8125rem; font-weight: 500;">
                     <input type="checkbox" name="mostrar_ocultas" id="mostrar_ocultas" value="1"
                         <?php echo $mostrar_ocultas ? 'checked' : ''; ?> onchange="this.form.submit()"
@@ -278,13 +293,23 @@
                             
                             <!-- Inventario button (solo productos) -->
                             <?php if (!$esServicio): ?>
+                                <?php 
+                                $requisicionModel = new Requisicion();
+                                $todosDeAlmacen = $requisicionModel->todosProductosDeAlmacen($req['id']);
+                                ?>
                                 <?php if (($user['rol'] === 'compras' || $user['rol'] === 'admin') && $req['estado'] === 'aprobada' && $req['agregado_a_inventario'] != 1): ?>
-                                    <a href="agregar-a-inventario.php?id=<?php echo $req['id']; ?>" 
-                                       class="btn btn-sm btn-success agregar-inventario-btn"
-                                       data-req-id="<?php echo $req['id']; ?>"
-                                       data-req-folio="<?php echo htmlspecialchars($req['folio']); ?>">
-                                        <i class="fas fa-plus-circle"></i> Inventario
-                                    </a>
+                                    <?php if ($todosDeAlmacen): ?>
+                                        <span class="btn btn-sm" style="background: var(--gray-100); color: var(--gray-500); cursor: default; font-weight: 600;" title="Todos los productos fueron surtidos desde almacen">
+                                            <i class="fas fa-warehouse"></i> Desde Almacen
+                                        </span>
+                                    <?php else: ?>
+                                        <a href="agregar-a-inventario.php?id=<?php echo $req['id']; ?>" 
+                                           class="btn btn-sm btn-success agregar-inventario-btn"
+                                           data-req-id="<?php echo $req['id']; ?>"
+                                           data-req-folio="<?php echo htmlspecialchars($req['folio']); ?>">
+                                            <i class="fas fa-plus-circle"></i> Inventario
+                                        </a>
+                                    <?php endif; ?>
                                 <?php elseif ($req['agregado_a_inventario'] == 1): ?>
                                     <span class="btn btn-sm" style="background: var(--gray-100); color: var(--gray-500); cursor: default; font-weight: 600;">
                                         <i class="fas fa-check"></i> En Inventario

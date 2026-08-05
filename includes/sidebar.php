@@ -109,6 +109,19 @@ if (!function_exists('tienePermiso')) {
             <i class="fas fa-users-cog nav-icon"></i>
             <span>Usuarios</span>
         </a>
+        <a href="bitacora.php" class="nav-item <?php echo ($current_page == 'bitacora.php') ? 'active' : ''; ?>">
+            <i class="fas fa-history nav-icon"></i>
+            <span>Bitacora</span>
+        </a>
         <?php endif; ?>
     </nav>
+    
+    <!-- Theme Toggle en la parte inferior -->
+    <div class="sidebar-footer" style="position: absolute; bottom: 0; left: 0; right: 0; padding: 1rem; border-top: 1px solid var(--border-color);">
+        <button class="theme-toggle-sidebar" onclick="toggleTheme()" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; background: var(--gray-100); border: none; border-radius: 10px; cursor: pointer; color: var(--text-secondary); font-size: 0.875rem; font-weight: 500; transition: all 0.2s ease;">
+            <i class="fas fa-moon" id="theme-icon-moon" style="font-size: 1rem;"></i>
+            <i class="fas fa-sun" id="theme-icon-sun" style="font-size: 1rem; display: none;"></i>
+            <span id="theme-label">Modo Oscuro</span>
+        </button>
+    </div>
 </aside>

@@ -6,6 +6,31 @@ class Requisicion {
         $this->conn = getConnection();
     }
     
+    /**
+     * Verifica si todos los productos aprobados de una requisicion son surtidos desde almacen
+     */
+    public function todosProductosDeAlmacen($requisicion_id) {
+        $sql = "SELECT 
+                    COUNT(*) as total_aprobados,
+                    SUM(CASE WHEN COALESCE(surtido_almacen, 0) = 1 THEN 1 ELSE 0 END) as total_almacen
+                FROM requisicion_detalles 
+                WHERE requisicion_id = ? AND aprobado = 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $requisicion_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $stmt->close();
+        
+        // Si no hay productos aprobados, retornar false
+        if ($row['total_aprobados'] == 0) {
+            return false;
+        }
+        
+        // Retorna true si todos los productos aprobados son de almacen
+        return $row['total_aprobados'] == $row['total_almacen'];
+    }
+    
     public function crear($datos) {
         $folio = 'REQ-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
         
@@ -112,7 +137,7 @@ class Requisicion {
         return $result;
     }
     
-    public function obtenerTodas($estado = null, $rol = null, $user_id = null, $mes = null, $anio = null, $mostrar_ocultas = false) {
+    public function obtenerTodas($estado = null, $rol = null, $user_id = null, $mes = null, $anio = null, $mostrar_ocultas = false, $usuario_filter = null) {
         $sql = "SELECT r.*, r.porcentaje_iva, s.nombre as sub_almacen_nombre, u.nombre_completo as usuario_nombre
                 FROM requisiciones r 
                 LEFT JOIN sub_almacenes s ON r.sub_almacen_id = s.id
@@ -163,6 +188,11 @@ class Requisicion {
             $conditions[] = "YEAR(r.fecha_solicitud) = " . intval($anio);
         }
         
+        // Filtro por usuario solicitante
+        if ($usuario_filter) {
+            $conditions[] = "r.usuario_id = " . intval($usuario_filter);
+        }
+        
         if (count($conditions) > 0) {
             $sql .= " WHERE " . implode(" AND ", $conditions);
         }
@@ -179,6 +209,23 @@ class Requisicion {
         }
         
         return $requisiciones;
+    }
+    
+    // Obtener usuarios que han creado requisiciones (para el filtro)
+    public function obtenerUsuariosConRequisiciones() {
+        $sql = "SELECT DISTINCT u.id, u.nombre_completo, u.rol 
+                FROM usuarios u 
+                INNER JOIN requisiciones r ON u.id = r.usuario_id 
+                WHERE u.activo = 1 
+                ORDER BY u.nombre_completo ASC";
+        $result = $this->conn->query($sql);
+        $usuarios = [];
+        if ($result && $result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $usuarios[] = $row;
+            }
+        }
+        return $usuarios;
     }
     
     public function cambiarEstado($id, $nuevo_estado) {
@@ -252,6 +299,7 @@ class Requisicion {
         $sql = "SELECT rd.*,
                        rd.unidad as unidad,
                        rd.precio_cotizado,
+                       COALESCE(rd.surtido_almacen, 0) as surtido_almacen,
                        i.precio_unitario,
                        inv_original.codigo as codigo_original,
                        p.nombre as proveedor_nombre

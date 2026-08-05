@@ -1,10 +1,12 @@
 <?php
 require_once 'init.php';
+require_once 'models/Bitacora.php';
 
 $authController = new AuthController();
 $authController->checkPermission();
 
 $user = $authController->getCurrentUser();
+$bitacora = new Bitacora();
 
 $mensaje = '';
 $tipo_mensaje = '';
@@ -104,9 +106,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $datos['cantidades'] = $_POST['cantidades'] ?? [];
             $datos['unidades'] = $_POST['unidades'] ?? [];
             $datos['productos_nombre'] = $_POST['productos_nombre_custom'] ?? [];
-            
-            // DEBUG: Guardar log de unidades recibidas
-            file_put_contents('debug_unidades.log', date('Y-m-d H:i:s') . " - Unidades recibidas: " . print_r($_POST['unidades'] ?? 'NO EXISTE', true) . "\n", FILE_APPEND);
         }
         
         $resultado = $requisicionController->crear($datos, $user);
@@ -115,6 +114,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $tipoTexto = $tipoRequisicion === 'servicio' ? 'de servicio' : 'de producto';
             $mensaje = "Requisición $tipoTexto creada exitosamente con folio: " . $resultado['folio'] . ". Se ha notificado al departamento de compras.";
             $tipo_mensaje = "success";
+            
+            // Registrar en bitacora
+            $bitacora->registrar(
+                $user['id'],
+                $user['nombre_completo'],
+                'crear',
+                'requisiciones',
+                'Nueva requisicion ' . $tipoTexto . ' creada. Folio: ' . $resultado['folio'] . '. Productos: ' . count($datos['productos']),
+                null,
+                ['folio' => $resultado['folio'], 'tipo' => $tipoRequisicion, 'productos' => count($datos['productos'])]
+            );
         } else {
             $mensaje = "Error al crear la requisición: " . ($resultado['error'] ?? 'Error desconocido');
             $tipo_mensaje = "error";

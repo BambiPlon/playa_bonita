@@ -248,7 +248,7 @@ form{
 
             <button type="submit" class="btn-login">
                 <i class="fas fa-right-to-bracket"></i>
-                Iniciar Sesio
+                Iniciar Sesion
             </button>
         </form>
 

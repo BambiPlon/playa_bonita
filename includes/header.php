@@ -27,9 +27,6 @@ $notificaciones_header = array_slice($notificaciones_header, 0, 5);
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title><?php echo $pageTitle ?? 'Sistema de Inventario'; ?></title>
-    <link rel="icon" type="image/svg+xml" href="public/favicon.svg">
-    <link rel="icon" type="image/png" sizes="32x32" href="public/icon-dark-32x32.png">
-    <link rel="apple-touch-icon" href="public/apple-icon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -237,7 +234,41 @@ $notificaciones_header = array_slice($notificaciones_header, 0, 5);
         .view-all-link:hover {
             background: var(--gray-50);
         }
+        
+        /* Theme Toggle */
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border: none;
+            background: transparent;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            color: var(--gray-500);
+            font-size: 1rem;
+        }
+        
+        .theme-toggle:hover {
+            background: var(--gray-100);
+            color: var(--primary);
+        }
+        
+        [data-theme="dark"] .theme-toggle:hover {
+            background: var(--gray-200);
+        }
     </style>
+    <script>
+        // Aplicar tema guardado inmediatamente para evitar flash
+        (function() {
+            var savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
 </head>
 <body>
     <header class="header">
@@ -252,11 +283,6 @@ $notificaciones_header = array_slice($notificaciones_header, 0, 5);
         </div>
         
         <div class="header-right">
-            <div class="search-box">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" placeholder="Buscar..." aria-label="Buscar">
-            </div>
-            
             <div class="notifications-dropdown">
                 <div class="notification-bell" onclick="toggleNotifications()" aria-label="Notificaciones">
                     <i class="fas fa-bell"></i>

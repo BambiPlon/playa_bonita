@@ -213,10 +213,6 @@ class Usuario {
         return $stmt->execute();
     }
     
-    public function __destruct() {
-        if ($this->conn) {
-            $this->conn->close();
-        }
-    }
+    // No cerrar la conexión en el destructor ya que es compartida
 }
 ?>

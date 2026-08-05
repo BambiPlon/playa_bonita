@@ -1,6 +1,7 @@
 <?php
 require_once 'config/database.php';
 require_once 'models/Usuario.php';
+require_once 'models/Bitacora.php';
 
 session_start();
 
@@ -10,6 +11,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_rol'] !== 'admin') {
 }
 
 $usuarioModel = new Usuario();
+$bitacora = new Bitacora();
 $errors = [];
 $success = false;
 
@@ -71,6 +73,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nuevo_id = $usuarioModel->crear($datos);
         
         if ($nuevo_id) {
+            // Registrar en bitacora
+            $bitacora->registrar(
+                $_SESSION['user_id'],
+                $_SESSION['user_nombre'] ?? 'Admin',
+                'crear',
+                'usuarios',
+                'Nuevo usuario creado: ' . $username . ' (' . $nombre_completo . ') - Rol: ' . $rol,
+                null,
+                ['usuario_id' => $nuevo_id, 'username' => $username, 'rol' => $rol]
+            );
+            
             $_SESSION['success'] = "Usuario creado exitosamente";
             header('Location: usuarios.php');
             exit;

@@ -34,10 +34,6 @@ class SubAlmacen {
         return null;
     }
     
-    public function __destruct() {
-        if ($this->conn) {
-            $this->conn->close();
-        }
-    }
+    // Conexión manejada por singleton - no cerrar aquí
 }
 ?>

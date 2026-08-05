@@ -54,11 +54,15 @@ if ($req['agregado_a_inventario'] == 1) {
     exit;
 }
 
+// Verificar si todos los productos son de almacén
+if ($requisicion->todosProductosDeAlmacen($requisicion_id)) {
+    $_SESSION['warning_message'] = 'Todos los productos de esta requisicion fueron surtidos desde almacen. No hay nada que agregar al inventario.';
+    header('Location: ver-requisicion.php?id=' . $requisicion_id);
+    exit;
+}
+
 // Obtener detalles de la requisición
 $detalles = $requisicion->obtenerDetalles($requisicion_id);
-
-// DEBUG: Ver que datos llegan de los detalles
-file_put_contents('debug_agregar_inv.log', date('Y-m-d H:i:s') . " - Detalles: " . print_r($detalles, true) . "\n", FILE_APPEND);
 
 $conn = getConnection();
 
@@ -72,9 +76,17 @@ $productos_agregados = 0;
 $productos_actualizados = 0;
 $errores = [];
 
+$productos_desde_almacen = 0;
+
 foreach ($detalles as $detalle) {
     if ($detalle['aprobado'] != 1) {
         continue; // Saltar productos no aprobados
+    }
+    
+    // Saltar productos que fueron surtidos desde almacén (ya existen en inventario)
+    if (isset($detalle['surtido_almacen']) && $detalle['surtido_almacen'] == 1) {
+        $productos_desde_almacen++;
+        continue;
     }
     
     $nombre = trim($detalle['producto_nombre']);
@@ -182,7 +194,7 @@ foreach ($detalles as $detalle) {
         $sql_insert = "INSERT INTO inventario (codigo, nombre, sub_almacen_id, cantidad, unidad, precio_unitario, stock_minimo) 
                        VALUES (?, ?, ?, ?, ?, ?, 10)";
         $stmt_insert = $conn->prepare($sql_insert);
-        $stmt_insert->bind_param("ssiids", $codigo_original, $nombre, $almacen_destino_id, $cantidad, $unidad, $precio);
+        $stmt_insert->bind_param("ssiisd", $codigo_original, $nombre, $almacen_destino_id, $cantidad, $unidad, $precio);
         
         if ($stmt_insert->execute()) {
             $productos_agregados++;
@@ -203,10 +215,12 @@ $stmt_marcar->close();
 $conn->close();
 
 // Preparar mensaje de resultado
+$mensaje_almacen = $productos_desde_almacen > 0 ? " (Se omitieron $productos_desde_almacen productos ya surtidos desde almacen)" : "";
+
 if (count($errores) > 0) {
-    $_SESSION['warning_message'] = "Algunos productos no pudieron ser procesados: " . implode(", ", $errores);
+    $_SESSION['warning_message'] = "Algunos productos no pudieron ser procesados: " . implode(", ", $errores) . $mensaje_almacen;
 } else {
-    $_SESSION['success_message'] = "Requisición agregada al inventario exitosamente. Productos agregados: $productos_agregados, Productos actualizados: $productos_actualizados";
+    $_SESSION['success_message'] = "Requisicion agregada al inventario exitosamente. Productos agregados: $productos_agregados, Productos actualizados: $productos_actualizados" . $mensaje_almacen;
 }
 
 header('Location: ver-requisicion.php?id=' . $requisicion_id);

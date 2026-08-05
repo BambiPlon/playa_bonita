@@ -81,9 +81,6 @@ class Notificacion {
         }
     }
     
-    public function __destruct() {
-        if ($this->conn) {
-            $this->conn->close();
-        }
-    }
+    // No cerrar la conexión en el destructor ya que es compartida
+    // La conexión se gestiona globalmente en config/database.php
 }

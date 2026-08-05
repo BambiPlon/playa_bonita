@@ -775,11 +775,8 @@ function confirmarCrearRequisicion(event) {
       h3.type = 'hidden'; h3.name = 'cantidades[]'; h3.value = cantidad ? cantidad.value : '0'; h3.className = 'dynamic-product-data';
       form.appendChild(h3);
       
-      var unidadValue = unidad ? unidad.value : '';
-      console.log('[v0] Producto idx:', idx, 'Unidad element:', unidad, 'Unidad value:', unidadValue);
-      
       var h4 = document.createElement('input');
-      h4.type = 'hidden'; h4.name = 'unidades[]'; h4.value = unidadValue; h4.className = 'dynamic-product-data';
+      h4.type = 'hidden'; h4.name = 'unidades[]'; h4.value = unidad ? unidad.value : ''; h4.className = 'dynamic-product-data';
       form.appendChild(h4);
   });
   

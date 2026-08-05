@@ -38,17 +38,74 @@
                 </thead>
                 <tbody>
                     <?php if (count($salidas) > 0): ?>
-                        <?php foreach ($salidas as $salida): ?>
+                        <?php 
+                        // Agrupar salidas por folio_grupo
+                        $salidas_agrupadas = [];
+                        foreach ($salidas as $salida) {
+                            $folio_grupo = $salida['folio_grupo'] ?? substr($salida['folio'], 0, strrpos($salida['folio'], '-'));
+                            if (!isset($salidas_agrupadas[$folio_grupo])) {
+                                $salidas_agrupadas[$folio_grupo] = [
+                                    'folio' => $folio_grupo,
+                                    'fecha_salida' => $salida['fecha_salida'],
+                                    'sub_almacen_nombre' => $salida['sub_almacen_nombre'],
+                                    'usuario_nombre' => $salida['usuario_nombre'],
+                                    'destino' => $salida['destino'],
+                                    'primer_id' => $salida['id'],
+                                    'productos' => []
+                                ];
+                            }
+                            $salidas_agrupadas[$folio_grupo]['productos'][] = [
+                                'nombre' => $salida['producto_nombre'],
+                                'cantidad' => $salida['cantidad']
+                            ];
+                        }
+                        ?>
+                        <?php foreach ($salidas_agrupadas as $grupo): ?>
                             <tr style="border-bottom: 1px solid var(--gray-100); transition: background 0.15s;" onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background='transparent'">
-                                <td style="padding: 0.75rem 1rem;"><span style="color: var(--primary); font-weight: 600; font-size: 0.8125rem;"><?php echo htmlspecialchars($salida['folio']); ?></span></td>
-                                <td style="padding: 0.75rem 1rem; color: var(--gray-900); font-size: 0.8125rem;"><?php echo date('d/m/Y', strtotime($salida['fecha_salida'])); ?></td>
-                                <td style="padding: 0.75rem 1rem;"><strong style="color: var(--gray-900); font-size: 0.8125rem;"><?php echo htmlspecialchars($salida['producto_nombre']); ?></strong></td>
-                                <td style="padding: 0.75rem 1rem;"><span style="color: var(--primary); font-weight: 700; font-size: 0.9375rem;"><?php echo $salida['cantidad']; ?></span></td>
-                                <td style="padding: 0.75rem 1rem;"><span class="badge badge-primary"><?php echo htmlspecialchars($salida['sub_almacen_nombre']); ?></span></td>
-                                <td style="padding: 0.75rem 1rem; color: var(--text-muted); font-size: 0.8125rem;"><?php echo htmlspecialchars($salida['usuario_nombre']); ?></td>
-                                <td style="padding: 0.75rem 1rem; color: var(--gray-900); font-size: 0.8125rem;"><?php echo htmlspecialchars($salida['destino']); ?></td>
+                                <td style="padding: 0.75rem 1rem;"><span style="color: var(--primary); font-weight: 600; font-size: 0.8125rem;"><?php echo htmlspecialchars($grupo['folio']); ?></span></td>
+                                <td style="padding: 0.75rem 1rem; color: var(--gray-900); font-size: 0.8125rem;"><?php echo date('d/m/Y', strtotime($grupo['fecha_salida'])); ?></td>
+                                <td style="padding: 0.75rem 1rem;">
+                                    <?php if (count($grupo['productos']) === 1): ?>
+                                        <strong style="color: var(--gray-900); font-size: 0.8125rem;"><?php echo htmlspecialchars($grupo['productos'][0]['nombre']); ?></strong>
+                                    <?php else: ?>
+                                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                                            <?php foreach ($grupo['productos'] as $i => $prod): ?>
+                                                <?php if ($i < 3): ?>
+                                                    <span style="color: var(--gray-900); font-size: 0.75rem;"><?php echo htmlspecialchars($prod['nombre']); ?></span>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                            <?php if (count($grupo['productos']) > 3): ?>
+                                                <span style="color: var(--gray-500); font-size: 0.6875rem; font-style: italic;">+<?php echo count($grupo['productos']) - 3; ?> mas...</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="padding: 0.75rem 1rem;">
+                                    <?php if (count($grupo['productos']) === 1): ?>
+                                        <span style="color: var(--primary); font-weight: 700; font-size: 0.9375rem;"><?php echo $grupo['productos'][0]['cantidad']; ?></span>
+                                    <?php else: ?>
+                                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                                            <?php foreach ($grupo['productos'] as $i => $prod): ?>
+                                                <?php if ($i < 3): ?>
+                                                    <span style="color: var(--primary); font-weight: 600; font-size: 0.75rem;"><?php echo $prod['cantidad']; ?></span>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                            <?php if (count($grupo['productos']) > 3): ?>
+                                                <span style="color: var(--gray-400); font-size: 0.6875rem;">...</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="padding: 0.75rem 1rem;"><span class="badge badge-primary"><?php echo htmlspecialchars($grupo['sub_almacen_nombre']); ?></span></td>
+                                <td style="padding: 0.75rem 1rem; color: var(--text-muted); font-size: 0.8125rem;"><?php echo htmlspecialchars($grupo['usuario_nombre']); ?></td>
+                                <td style="padding: 0.75rem 1rem; color: var(--gray-900); font-size: 0.8125rem;"><?php echo htmlspecialchars($grupo['destino']); ?></td>
                                 <td style="padding: 0.75rem 1rem; text-align: center;">
-                                    <a href="generar-pdf-salida.php?id=<?php echo $salida['id']; ?>" class="btn btn-sm btn-danger" target="_blank"><i class="fas fa-file-pdf"></i> PDF</a>
+                                    <a href="generar-pdf-salida.php?folio=<?php echo urlencode($grupo['folio']); ?>" class="btn btn-sm btn-danger" target="_blank">
+                                        <i class="fas fa-file-pdf"></i> PDF
+                                        <?php if (count($grupo['productos']) > 1): ?>
+                                            <span style="font-size: 0.625rem; background: rgba(255,255,255,0.3); padding: 1px 4px; border-radius: 4px; margin-left: 4px;"><?php echo count($grupo['productos']); ?></span>
+                                        <?php endif; ?>
+                                    </a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

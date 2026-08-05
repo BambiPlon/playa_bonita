@@ -48,15 +48,15 @@
             </div>
         </div>
 
-        <!-- Requisiciones -->
+        <!-- Requisiciones Pendientes -->
         <div style="background: white; border-radius: 14px; padding: 1.25rem; border: 1px solid var(--border-color); transition: all 0.2s;" onmouseover="this.style.boxShadow='0 8px 25px -5px rgba(0,0,0,0.1)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none'; this.style.transform='translateY(0)'">
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <div style="background: var(--warning-light); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                     <i class="fas fa-clipboard-list" style="font-size: 1.125rem; color: var(--warning);"></i>
                 </div>
                 <div>
-                    <p style="margin: 0; color: var(--text-muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Requisiciones</p>
-                    <h3 style="margin: 2px 0 0; font-size: 1.625rem; font-weight: 700; color: var(--gray-900); letter-spacing: -0.5px;"><?php echo $data['stats']['total_requisiciones']; ?></h3>
+                    <p style="margin: 0; color: var(--text-muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Req. Pendientes</p>
+                    <h3 style="margin: 2px 0 0; font-size: 1.625rem; font-weight: 700; color: <?php echo $data['stats']['requisiciones_pendientes'] > 0 ? 'var(--warning)' : 'var(--gray-900)'; ?>; letter-spacing: -0.5px;"><?php echo $data['stats']['requisiciones_pendientes']; ?></h3>
                 </div>
             </div>
         </div>

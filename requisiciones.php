@@ -10,10 +10,17 @@ $requisicionController = new RequisicionController();
 $estado_filter = isset($_GET['estado']) ? $_GET['estado'] : null;
 $mes_filter = isset($_GET['mes']) ? $_GET['mes'] : null;
 $anio_filter = isset($_GET['anio']) ? $_GET['anio'] : date('Y');
+$usuario_filter = isset($_GET['usuario']) ? $_GET['usuario'] : null;
 
 $mostrar_ocultas = isset($_GET['mostrar_ocultas']) && $_GET['mostrar_ocultas'] == '1' ? true : false;
 
-$requisiciones = $requisicionController->listar($user, $estado_filter, $mes_filter, $anio_filter, $mostrar_ocultas);
+// Obtener usuarios para el filtro (solo para roles con permisos)
+$usuarios_filtro = [];
+if (in_array($user['rol'], ['compras', 'gerencia', 'gerencia_general', 'admin'])) {
+    $usuarios_filtro = $requisicionController->obtenerUsuariosConRequisiciones();
+}
+
+$requisiciones = $requisicionController->listar($user, $estado_filter, $mes_filter, $anio_filter, $mostrar_ocultas, $usuario_filter);
 
 $mensaje = '';
 $tipo_mensaje = '';

@@ -57,9 +57,10 @@ class Salida {
     }
     
     public function crearMultiple($datos_base, $productos) {
-        $folio = 'SAL-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
+        $folio_base = 'SAL-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
         $errores = [];
         $exitosos = 0;
+        $primer_id = null;
         
         foreach ($productos as $prod) {
             $stock_actual = $this->obtenerStock($prod['producto_id']);
@@ -68,13 +69,15 @@ class Salida {
                 continue;
             }
             
-            $folio_item = $folio . '-' . ($exitosos + 1);
-            $query = "INSERT INTO salidas_almacen (folio, usuario_id, sub_almacen_id, producto_id, cantidad, motivo, destino, fecha_salida) 
-                      VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            // Usar el mismo folio base para todas las salidas del grupo
+            $query = "INSERT INTO salidas_almacen (folio, folio_grupo, usuario_id, sub_almacen_id, producto_id, cantidad, motivo, destino, fecha_salida) 
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             
+            $folio_item = $folio_base . '-' . ($exitosos + 1);
             $stmt = $this->conn->prepare($query);
-            $stmt->bind_param("siiissss", 
+            $stmt->bind_param("ssiisssss", 
                 $folio_item,
+                $folio_base,
                 $datos_base['usuario_id'],
                 $datos_base['sub_almacen_id'],
                 $prod['producto_id'],
@@ -85,15 +88,35 @@ class Salida {
             );
             
             if ($stmt->execute()) {
+                if ($primer_id === null) {
+                    $primer_id = $this->conn->insert_id;
+                }
                 $this->actualizarInventario($prod['producto_id'], $prod['cantidad']);
                 $exitosos++;
             }
         }
         
         if ($exitosos > 0) {
-            return ['success' => true, 'folio' => $folio, 'exitosos' => $exitosos, 'errores' => $errores];
+            return ['success' => true, 'folio' => $folio_base, 'exitosos' => $exitosos, 'errores' => $errores, 'primer_id' => $primer_id];
         }
         return ['success' => false, 'errores' => $errores];
+    }
+    
+    public function obtenerPorFolioGrupo($folio_grupo) {
+        $query = "SELECT s.*, p.nombre as producto_nombre, p.codigo as producto_codigo, p.unidad,
+                  sa.nombre as sub_almacen_nombre, u.nombre_completo as usuario_nombre
+                  FROM salidas_almacen s
+                  INNER JOIN inventario p ON s.producto_id = p.id
+                  INNER JOIN sub_almacenes sa ON s.sub_almacen_id = sa.id
+                  INNER JOIN usuarios u ON s.usuario_id = u.id
+                  WHERE s.folio_grupo = ?
+                  ORDER BY s.id ASC";
+        
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("s", $folio_grupo);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_all(MYSQLI_ASSOC);
     }
     
     public function obtenerRequisicionesCompletadas($sub_almacen_id = null) {

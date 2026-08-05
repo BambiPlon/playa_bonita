@@ -4,6 +4,9 @@ require_once 'config/database.php';
 require_once 'models/Producto.php';
 require_once 'models/SubAlmacen.php';
 require_once 'models/Usuario.php';
+require_once 'models/Bitacora.php';
+
+$bitacora = new Bitacora();
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
@@ -66,6 +69,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($resultado['success']) {
                 $mensaje = "Producto actualizado exitosamente. Se agregaron {$cantidad_nueva} unidades. Nueva cantidad: {$resultado['nueva_cantidad']}.";
                 $tipo_mensaje = 'success';
+                
+                // Registrar en bitacora
+                $bitacora->registrar(
+                    $_SESSION['user_id'],
+                    $_SESSION['user_nombre'] ?? 'Usuario',
+                    'entrada_almacen',
+                    'inventario',
+                    'Entrada de ' . $cantidad_nueva . ' unidades de ' . $producto_existente['nombre'] . '. Stock: ' . $resultado['nueva_cantidad'],
+                    ['cantidad_anterior' => $producto_existente['cantidad']],
+                    ['cantidad_agregada' => $cantidad_nueva, 'nueva_cantidad' => $resultado['nueva_cantidad']]
+                );
             } else {
                 $mensaje = 'Error al actualizar la cantidad del producto.';
                 $tipo_mensaje = 'danger';
@@ -87,6 +101,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($resultado === true) {
                 $mensaje = 'Producto agregado exitosamente al inventario.';
                 $tipo_mensaje = 'success';
+                
+                // Registrar en bitacora
+                $bitacora->registrar(
+                    $_SESSION['user_id'],
+                    $_SESSION['user_nombre'] ?? 'Usuario',
+                    'crear',
+                    'inventario',
+                    'Nuevo producto creado: ' . $datos['nombre'] . ' (' . $datos['codigo'] . '). Cantidad inicial: ' . $datos['cantidad'],
+                    null,
+                    $datos
+                );
             } elseif (is_array($resultado) && isset($resultado['error'])) {
                 if ($resultado['error'] === 'duplicate') {
                     $mensaje = 'El producto ya existe en este sub-almacén. Usa el mismo código para agregar más unidades.';

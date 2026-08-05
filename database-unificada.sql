@@ -1,7 +1,8 @@
 -- =============================================
--- BASE DE DATOS UNIFICADA
+-- BASE DE DATOS UNIFICADA COMPLETA
 -- Sistema de Inventario y Requisiciones
 -- Hotel Playa Bonita
+-- Versión: 2.0 (Incluye todas las migraciones)
 -- =============================================
 
 DROP DATABASE IF EXISTS inventario_requisiciones;
@@ -58,10 +59,20 @@ CREATE TABLE permisos (
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Tabla de unidades de medida
+CREATE TABLE unidades (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE,
+    abreviatura VARCHAR(10),
+    activo TINYINT(1) DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Tabla de productos en inventario
+-- NOTA: El índice único es por código + sub_almacen para permitir mismo código en diferentes almacenes
 CREATE TABLE inventario (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    codigo VARCHAR(50) UNIQUE NOT NULL,
+    codigo VARCHAR(50) NOT NULL,
     nombre VARCHAR(200) NOT NULL,
     descripcion TEXT,
     sub_almacen_id INT NOT NULL,
@@ -69,8 +80,10 @@ CREATE TABLE inventario (
     unidad VARCHAR(50) NOT NULL,
     precio_unitario DECIMAL(10,2),
     stock_minimo INT DEFAULT 10,
+    activo TINYINT(1) DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_codigo_almacen (codigo, sub_almacen_id),
     FOREIGN KEY (sub_almacen_id) REFERENCES sub_almacenes(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -78,7 +91,8 @@ CREATE TABLE inventario (
 CREATE TABLE requisiciones (
     id INT PRIMARY KEY AUTO_INCREMENT,
     folio VARCHAR(50) UNIQUE NOT NULL,
-    sub_almacen_id INT NULL, -- Permitir NULL para usuarios sin sub-almacén asignado (admin, compras, gerencia)
+    tipo_requisicion ENUM('producto', 'servicio') DEFAULT 'producto',
+    sub_almacen_id INT NULL,
     usuario_id INT NOT NULL,
     solicitante VARCHAR(200) NOT NULL,
     fecha_solicitud DATE NOT NULL,
@@ -86,6 +100,7 @@ CREATE TABLE requisiciones (
     observaciones TEXT,
     justificacion_rechazo TEXT NULL,
     monto_cotizado DECIMAL(10,2) NULL,
+    porcentaje_iva DECIMAL(5,2) DEFAULT 16.00,
     fecha_cotizacion TIMESTAMP NULL,
     cotizado_por INT NULL,
     aprobado_por INT NULL,
@@ -93,8 +108,11 @@ CREATE TABLE requisiciones (
     fecha_aprobacion TIMESTAMP NULL,
     fecha_aprobacion_general TIMESTAMP NULL,
     agregado_a_inventario TINYINT(1) DEFAULT 0,
+    oculta TINYINT(1) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (sub_almacen_id) REFERENCES sub_almacenes(id), -- La foreign key sigue funcionando con NULL
+    INDEX idx_requisiciones_oculta (oculta),
+    INDEX idx_tipo_requisicion (tipo_requisicion),
+    FOREIGN KEY (sub_almacen_id) REFERENCES sub_almacenes(id) ON DELETE SET NULL ON UPDATE CASCADE,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
     FOREIGN KEY (cotizado_por) REFERENCES usuarios(id),
     FOREIGN KEY (aprobado_por) REFERENCES usuarios(id),
@@ -114,9 +132,22 @@ CREATE TABLE requisicion_detalles (
     proveedor_id INT NULL,
     aprobado TINYINT(1) DEFAULT 1,
     justificacion_rechazo TEXT NULL,
+    surtido_almacen TINYINT(1) DEFAULT 0 COMMENT 'Indica si el producto fue surtido desde el almacén',
+    INDEX idx_surtido_almacen (surtido_almacen),
     FOREIGN KEY (requisicion_id) REFERENCES requisiciones(id) ON DELETE CASCADE,
     FOREIGN KEY (producto_id) REFERENCES inventario(id) ON DELETE SET NULL,
     FOREIGN KEY (proveedor_id) REFERENCES proveedores(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla para tracking de requisiciones ocultas por usuario
+CREATE TABLE requisiciones_ocultas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    requisicion_id INT NOT NULL,
+    usuario_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_req_user (requisicion_id, usuario_id),
+    FOREIGN KEY (requisicion_id) REFERENCES requisiciones(id) ON DELETE CASCADE,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla de notificaciones
@@ -143,15 +174,40 @@ CREATE TABLE salidas_almacen (
     cantidad INT NOT NULL,
     motivo TEXT NOT NULL,
     destino VARCHAR(200),
-    fecha_salida DATE NOT NULL,
+    fecha_salida DATETIME NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
     FOREIGN KEY (sub_almacen_id) REFERENCES sub_almacenes(id),
     FOREIGN KEY (producto_id) REFERENCES inventario(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Tabla de plantillas de requisición
+CREATE TABLE plantillas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    nombre VARCHAR(255) NOT NULL,
+    descripcion TEXT NULL,
+    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    INDEX idx_usuario (usuario_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla de productos de plantilla
+CREATE TABLE plantilla_productos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    plantilla_id INT NOT NULL,
+    producto_id INT NULL,
+    nombre_custom VARCHAR(255) NULL,
+    cantidad INT NOT NULL DEFAULT 1,
+    unidad VARCHAR(50) NOT NULL,
+    FOREIGN KEY (plantilla_id) REFERENCES plantillas(id) ON DELETE CASCADE,
+    INDEX idx_plantilla (plantilla_id),
+    INDEX idx_producto (producto_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- =============================================
--- DATOS DE EJEMPLO
+-- DATOS INICIALES
 -- =============================================
 
 -- Insertar sub-almacenes (incluyendo almacén general)
@@ -165,6 +221,32 @@ INSERT INTO sub_almacenes (id, nombre, descripcion) VALUES
 (6, 'Tiendita', 'Productos de venta al público'),
 (7, 'Seguridad', 'Equipos y suministros de seguridad'),
 (8, 'Recepción', 'Suministros para área de recepción');
+
+-- Insertar unidades de medida predeterminadas
+INSERT INTO unidades (nombre, abreviatura) VALUES 
+('pieza', 'pza'),
+('unidad', 'und'),
+('caja', 'cja'),
+('paquete', 'paq'),
+('bolsa', 'bls'),
+('rollo', 'rll'),
+('metro', 'm'),
+('litro', 'lt'),
+('galón', 'gal'),
+('kilogramo', 'kg'),
+('gramo', 'gr'),
+('juego', 'jgo'),
+('par', 'par'),
+('docena', 'doc'),
+('millar', 'mll'),
+('tonelada', 'ton'),
+('cubeta', 'cub'),
+('bote', 'bte'),
+('lata', 'lta'),
+('botella', 'bot'),
+('garrafón', 'grf'),
+('servicio', 'srv'),
+('resma', 'rsm');
 
 -- Insertar proveedores de ejemplo
 INSERT INTO proveedores (nombre, contacto, telefono, email, rfc, activo) VALUES
@@ -187,40 +269,60 @@ INSERT INTO usuarios (username, password, nombre_completo, email, rol, sub_almac
 ('seguridad', '123456', 'Jefe de Seguridad', 'seguridad@playabonita.com', 'departamento', 7),
 ('recepcion', '123456', 'Recepcionista', 'recepcion@playabonita.com', 'solo_lectura', 8);
 
--- Datos de ejemplo para inventario
-INSERT INTO inventario (codigo, nombre, descripcion, sub_almacen_id, cantidad, unidad, precio_unitario, stock_minimo) VALUES
--- Tecnología
-('TEC-001', 'Mouse inalámbrico', 'Mouse óptico inalámbrico', 1, 25, 'pieza', 150.00, 10),
-('TEC-002', 'Teclado USB', 'Teclado estándar USB', 1, 15, 'pieza', 200.00, 5),
-('TEC-003', 'Monitor 24 pulgadas', 'Monitor LED Full HD', 1, 8, 'pieza', 2500.00, 3),
+-- Datos de ejemplo para inventario en Almacén General (ID 100)
+INSERT INTO inventario (codigo, nombre, descripcion, sub_almacen_id, cantidad, unidad, precio_unitario, stock_minimo, activo) VALUES
+-- Almacén General
+('ALM-001', 'Mouse inalámbrico', 'Mouse óptico inalámbrico', 100, 50, 'pieza', 150.00, 10, 1),
+('ALM-002', 'Teclado USB', 'Teclado estándar USB', 100, 30, 'pieza', 200.00, 5, 1),
+('ALM-003', 'Monitor 24 pulgadas', 'Monitor LED Full HD', 100, 15, 'pieza', 2500.00, 3, 1),
+('ALM-004', 'Cloro 1L', 'Cloro desinfectante', 100, 100, 'litro', 25.00, 20, 1),
+('ALM-005', 'Trapeador', 'Trapeador de microfibra', 100, 20, 'pieza', 80.00, 5, 1),
+('ALM-006', 'Jabón líquido', 'Jabón antibacterial 5L', 100, 60, 'litro', 120.00, 10, 1),
+('ALM-007', 'Papel bond carta', 'Resma de papel bond', 100, 200, 'resma', 120.00, 30, 1),
+('ALM-008', 'Pluma azul', 'Pluma de tinta azul', 100, 500, 'pieza', 5.00, 50, 1),
+('ALM-009', 'Engrapadora', 'Engrapadora metálica', 100, 25, 'pieza', 85.00, 5, 1),
+('ALM-010', 'Volantes', 'Volantes publicitarios', 100, 10000, 'pieza', 0.50, 1000, 1),
+('ALM-011', 'Banners', 'Banner impreso 1x2m', 100, 20, 'pieza', 350.00, 5, 1),
+('ALM-012', 'Cerveza lata', 'Cerveza en lata 355ml', 100, 600, 'pieza', 18.00, 100, 1),
+('ALM-013', 'Hielo', 'Bolsa de hielo 5kg', 100, 80, 'bolsa', 25.00, 15, 1),
+('ALM-014', 'Refresco 600ml', 'Refresco embotellado', 100, 300, 'pieza', 15.00, 50, 1),
+('ALM-015', 'Galletas', 'Paquete de galletas', 100, 160, 'paquete', 12.00, 30, 1),
+('ALM-016', 'Linterna LED', 'Linterna recargable', 100, 16, 'pieza', 250.00, 5, 1),
+('ALM-017', 'Radio comunicador', 'Radio portátil', 100, 12, 'pieza', 1200.00, 3, 1),
+('ALM-018', 'Folder tamaño carta', 'Folder de cartón', 100, 160, 'pieza', 3.00, 30, 1),
+('ALM-019', 'Clips', 'Caja de clips', 100, 50, 'caja', 15.00, 10, 1),
+-- Tecnología (sub-almacén)
+('TEC-001', 'Mouse inalámbrico', 'Mouse óptico inalámbrico', 1, 25, 'pieza', 150.00, 10, 1),
+('TEC-002', 'Teclado USB', 'Teclado estándar USB', 1, 15, 'pieza', 200.00, 5, 1),
+('TEC-003', 'Monitor 24 pulgadas', 'Monitor LED Full HD', 1, 8, 'pieza', 2500.00, 3, 1),
 -- Ama de Llaves
-('AMA-001', 'Cloro 1L', 'Cloro desinfectante', 2, 50, 'litro', 25.00, 20),
-('AMA-002', 'Trapeador', 'Trapeador de microfibra', 2, 10, 'pieza', 80.00, 5),
-('AMA-003', 'Jabón líquido', 'Jabón antibacterial 5L', 2, 30, 'litro', 120.00, 10),
+('AMA-001', 'Cloro 1L', 'Cloro desinfectante', 2, 50, 'litro', 25.00, 20, 1),
+('AMA-002', 'Trapeador', 'Trapeador de microfibra', 2, 10, 'pieza', 80.00, 5, 1),
+('AMA-003', 'Jabón líquido', 'Jabón antibacterial 5L', 2, 30, 'litro', 120.00, 10, 1),
 -- Administración
-('ADM-001', 'Papel bond carta', 'Resma de papel bond', 3, 100, 'resma', 120.00, 30),
-('ADM-002', 'Pluma azul', 'Pluma de tinta azul', 3, 200, 'pieza', 5.00, 50),
-('ADM-003', 'Engrapadora', 'Engrapadora metálica', 3, 12, 'pieza', 85.00, 5),
+('ADM-001', 'Papel bond carta', 'Resma de papel bond', 3, 100, 'resma', 120.00, 30, 1),
+('ADM-002', 'Pluma azul', 'Pluma de tinta azul', 3, 200, 'pieza', 5.00, 50, 1),
+('ADM-003', 'Engrapadora', 'Engrapadora metálica', 3, 12, 'pieza', 85.00, 5, 1),
 -- Marketing
-('MKT-001', 'Volantes', 'Volantes publicitarios', 4, 5000, 'pieza', 0.50, 1000),
-('MKT-002', 'Banners', 'Banner impreso 1x2m', 4, 13, 'pieza', 350.00, 5),
+('MKT-001', 'Volantes', 'Volantes publicitarios', 4, 5000, 'pieza', 0.50, 1000, 1),
+('MKT-002', 'Banners', 'Banner impreso 1x2m', 4, 13, 'pieza', 350.00, 5, 1),
 -- Poobar
-('POO-001', 'Cerveza lata', 'Cerveza en lata 355ml', 5, 300, 'pieza', 18.00, 100),
-('POO-002', 'Hielo', 'Bolsa de hielo 5kg', 5, 40, 'bolsa', 25.00, 15),
+('POO-001', 'Cerveza lata', 'Cerveza en lata 355ml', 5, 300, 'pieza', 18.00, 100, 1),
+('POO-002', 'Hielo', 'Bolsa de hielo 5kg', 5, 40, 'bolsa', 25.00, 15, 1),
 -- Tiendita
-('TIE-001', 'Refresco 600ml', 'Refresco embotellado', 6, 150, 'pieza', 15.00, 50),
-('TIE-002', 'Galletas', 'Paquete de galletas', 6, 80, 'paquete', 12.00, 30),
+('TIE-001', 'Refresco 600ml', 'Refresco embotellado', 6, 150, 'pieza', 15.00, 50, 1),
+('TIE-002', 'Galletas', 'Paquete de galletas', 6, 80, 'paquete', 12.00, 30, 1),
 -- Seguridad
-('SEG-001', 'Linterna LED', 'Linterna recargable', 7, 8, 'pieza', 250.00, 5),
-('SEG-002', 'Radio comunicador', 'Radio portátil', 7, 6, 'pieza', 1200.00, 3),
+('SEG-001', 'Linterna LED', 'Linterna recargable', 7, 8, 'pieza', 250.00, 5, 1),
+('SEG-002', 'Radio comunicador', 'Radio portátil', 7, 6, 'pieza', 1200.00, 3, 1),
 -- Recepción
-('REC-001', 'Folder tamaño carta', 'Folder de cartón', 8, 80, 'pieza', 3.00, 30),
-('REC-002', 'Clips', 'Caja de clips', 8, 25, 'caja', 15.00, 10);
+('REC-001', 'Folder tamaño carta', 'Folder de cartón', 8, 80, 'pieza', 3.00, 30, 1),
+('REC-002', 'Clips', 'Caja de clips', 8, 25, 'caja', 15.00, 10, 1);
 
 -- Requisiciones de ejemplo
-INSERT INTO requisiciones (folio, sub_almacen_id, usuario_id, solicitante, fecha_solicitud, estado) VALUES
-('REQ-2025-001', 1, 5, 'Jefe de Tecnología', '2025-01-15', 'pendiente'),
-('REQ-2025-002', 2, 6, 'Ama de Llaves', '2025-01-18', 'en_compras');
+INSERT INTO requisiciones (folio, tipo_requisicion, sub_almacen_id, usuario_id, solicitante, fecha_solicitud, estado) VALUES
+('REQ-2025-001', 'producto', 1, 5, 'Jefe de Tecnología', '2025-01-15', 'pendiente'),
+('REQ-2025-002', 'producto', 2, 6, 'Ama de Llaves', '2025-01-18', 'en_compras');
 
 -- Detalles de requisiciones de ejemplo
 INSERT INTO requisicion_detalles (requisicion_id, producto_id, producto_nombre, cantidad, unidad, justificacion) VALUES
@@ -236,11 +338,12 @@ INSERT INTO notificaciones (usuario_id, tipo, titulo, mensaje, requisicion_id, l
 
 -- Salidas de almacén de ejemplo
 INSERT INTO salidas_almacen (folio, usuario_id, sub_almacen_id, producto_id, cantidad, motivo, destino, fecha_salida) VALUES
-('SAL-2025-001', 5, 1, 1, 3, 'Entrega a departamento', 'Oficina principal', '2025-01-10'),
-('SAL-2025-002', 6, 2, 4, 10, 'Uso en limpieza', 'Áreas comunes', '2025-01-12');
+('SAL-2025-001', 5, 1, 20, 3, 'Entrega a departamento', 'Oficina principal', '2025-01-10 10:00:00'),
+('SAL-2025-002', 6, 2, 23, 10, 'Uso en limpieza', 'Áreas comunes', '2025-01-12 14:30:00');
 
 -- =============================================
 -- FIN DE SCRIPT
 -- =============================================
 
-SELECT 'Base de datos unificada creada exitosamente' as mensaje;
+SELECT 'Base de datos unificada creada exitosamente - Versión 2.0' as mensaje;
+SELECT 'Incluye: unidades, plantillas, tipo_requisicion, surtido_almacen, requisiciones_ocultas, porcentaje_iva' as caracteristicas;
